@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#06080a">
+    <title>PURAVI APP</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <!-- MQTT Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <style>
+        :root {
+            --bg: #06080a;
+            --primary: #00d2ff;
+            --secondary: #7d5fff;
+            --success: #00ff88;
+            --danger: #ff3366;
+            --warning: #ffb800;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevent body bounce/scroll for native feel */
+            overscroll-behavior: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            margin: 0;
+            padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bottom) + 100px) 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .scroll-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 50px;
+        }
+
+        /* Animated Mesh Background */
+        .mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(at 0% 0%, rgba(0, 210, 255, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(125, 95, 255, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(0, 255, 136, 0.05) 0px, transparent 50%);
+            filter: blur(80px);
+            animation: meshAnim 15s ease-in-out infinite alternate;
+        }
+
+        @keyframes meshAnim {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1) rotate(3deg); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            animation: fadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: left;
+            margin-bottom: 30px;
+            padding-left: 10px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(to bottom, #fff, #888);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 11px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-weight: 600;
+            margin: 5px 0 0 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #555;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 12px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Visual Stats Component */
+        .stat-card {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 35px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
+        .motor-aura {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 25px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .aura-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .aura-ring.active {
+            border-color: var(--primary);
+            border-top-color: transparent;
+            animation: spin 3s linear infinite;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.1);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .v-display {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .unit-lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: rgba(255,255,255,0.3);
+            margin-top: 5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .mini-stat {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .mini-val {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .mini-lbl {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.3;
+            margin-top: 4px;
+        }
+
+        /* Controls Section */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 28px;
+            padding: 24px;
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #00ff8822, #00ff8844);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: var(--success);
+            box-shadow: 0 15px 35px rgba(0, 255, 136, 0.1);
+        }
+
+        .btn-start:active { transform: scale(0.95); background: var(--success); color: #000; }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ff336622, #ff336644);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            color: var(--danger);
+            box-shadow: 0 15px 35px rgba(255, 51, 102, 0.1);
+        }
+
+        .btn-stop:active { transform: scale(0.95); background: var(--danger); color: #fff; }
+
+        .btn-icon {
+            font-size: 20px;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            position: fixed;
+            bottom: 25px;
+            left: 20px;
+            right: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 8px;
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            border-radius: 22px;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: 0.3s;
+        }
+
+        .nav-item.active {
+            background: rgba(255,255,255,0.05);
+            color: var(--primary);
+        }
+
+        /* Settings Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 2000;
+            transform: translateY(100%);
+            transition: 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            padding: calc(var(--safe-top) + 20px) 20px;
+            overflow-y: auto;
+        }
+
+        .overlay.active {
+            transform: translateY(0);
+        }
+
+        .overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .close-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .param-group {
+            background: var(--glass);
+            border-radius: 25px;
+            padding: 10px;
+            margin-bottom: 25px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .param-row:last-child { border-bottom: none; }
+
+        .param-info { text-align: left; }
+        .param-name { font-size: 13px; font-weight: 600; color: #fff; }
+        .param-desc { font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-top: 2px; }
+
+        .param-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .param-ctrl input {
+            width: 70px;
+            background: #000;
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 10px;
+            color: var(--primary);
+            text-align: center;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            outline: none;
+        }
+
+        .set-mini-btn {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(0, 210, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* Tank Visualization */
+        .tanks-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .tank {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tank-icon {
+            width: 30px;
+            height: 40px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            background: linear-gradient(transparent, var(--primary));
+            transition: 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tank.full .water { height: 90%; background: linear-gradient(transparent, var(--success)); }
+        .tank.full .tank-icon { border-color: var(--success); }
+        .tank.empty .water { height: 10%; background: linear-gradient(transparent, var(--danger)); }
+        .tank.empty .tank-icon { border-color: var(--danger); }
+
+        .fault-toast {
+            position: fixed;
+            top: calc(var(--safe-top) + 10px);
+            left: 20px;
+            right: 20px;
+            background: var(--danger);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+            z-index: 3000;
+            transform: translateY(-150%);
+            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(255, 51, 102, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .fault-toast.active { transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <div class="mesh"></div>
+    
+    <div id="toast" class="fault-toast">
+        <span id="toast-msg">VOLTAGE ANOMALY DETECTED</span>
+        <span onclick="toggleToast(false)" style="opacity:0.6">✕</span>
+    </div>
+
+    <!-- Scroll Container for Native Feel -->
+    <div class="scroll-container">
+        <div class="container" id="view-home">
+            <div class="header">
+                <h1>Puravi Intelligence</h1>
+                <p><span id="dot" class="status-dot"></span> <span id="conn-lbl">ESTABLISHING LINK...</span></p>
+            </div>
+
+            <div class="stat-card">
+                <div class="motor-aura">
+                    <div id="ring" class="aura-ring"></div>
+                    <div style="z-index:2">
+                        <p id="v-val" class="v-display">0</p>
+                        <p class="unit-lbl">Volts AC</p>
+                    </div>
+                </div>
+                
+                <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:2px;" id="m-status">
+                    MOTOR STANDBY
+                </div>
+
+                <div class="stats-grid">
+                    <div class="mini-stat">
+                        <span id="a-val" class="mini-val">0.0</span>
+                        <span class="mini-lbl">Amps Load</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span id="rt-val" class="mini-val">00:00</span>
+                        <span class="mini-lbl">Run Duration</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tanks-row">
+                <div id="tank-ut" class="tank">
+                    <div class="tank-icon"><div class="water"></div></div>
+                    <div style="text-align:left">
+                        <div style="font-size:9px; opacity:0.4; font-weight:700;">UPPER TANK</div>
+                        <div id="ut-lbl" style="font-size:11px; font-weight:800;">OK</div>
+                    </div>
+                </div>
+                <div id="tank-lt" class="tank">
+                    <div class="tank-icon"><div class="water"></div></div>
+                    <div style="text-align:left">
+                        <div style="font-size:9px; opacity:0.4; font-weight:700;">LOWER TANK</div>
+                        <div id="lt-lbl" style="font-size:11px; font-weight:800;">OK</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-start" onclick="sendCmd('G')">
+                    <span class="btn-icon">⚡</span>
+                    <span>START</span>
+                </button>
+                <button class="btn btn-stop" onclick="sendCmd('S')">
+                    <span class="btn-icon">✕</span>
+                    <span>STOP</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Overlay -->
+        <div id="overlay-set" class="overlay">
+            <div class="overlay-header">
+                <h2 style="margin:0; font-size:24px; font-weight:800;">System Config</h2>
+                <div class="close-btn" onclick="toggleSettings(false)">✕</div>
+            </div>
+            
+            <div id="param-list">
+                <!-- Parameters will be injected here -->
+            </div>
+            
+            <div style="height:100px;"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="toggleSettings(false)">
+            <span style="font-size:18px;">🏠</span>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" onclick="toggleSettings(true)">
+            <span style="font-size:18px;">⚙️</span>
+            <span>Settings</span>
+        </div>
+    </div>
+
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(() => console.log("Service Worker Registered"));
+        }
+
+        // MQTT Configuration
+        const BROKER = "cadeb3d01f724103a90d8399337dfd15.s1.eu.hivemq.cloud";
+        const PORT = 8884;
+        const USER = "PuraviPowers";
+        const PASS = "Puravipowers@1231";
+        const CLIENT_ID = "puravi_app_" + Math.random().toString(16).substr(2, 4);
+
+        let client = new Paho.MQTT.Client(BROKER, PORT, CLIENT_ID);
+        
+        client.onConnectionLost = (rsp) => {
+            updateStatus(false, "LINK SEVERED - RETRYING");
+            setTimeout(connect, 3000);
+        };
+
+        client.onMessageArrived = (msg) => {
+            handleData(msg.payloadString);
+        };
+
+        function connect() {
+            client.connect({
+                useSSL: true,
+                userName: USER,
+                password: PASS,
+                onSuccess: () => {
+                    updateStatus(true, "CONNECTED TO CLOUD");
+                    client.subscribe("puravi/telemetry");
+                    sendCmd('Q'); // Initial sync
+                },
+                onFailure: () => {
+                    updateStatus(false, "CONNECTION FAILED");
+                    setTimeout(connect, 5000);
+                }
+            });
+        }
+
+        function updateStatus(online, msg) {
+            document.getElementById('dot').className = online ? 'status-dot online' : 'status-dot';
+            document.getElementById('conn-lbl').innerText = msg;
+        }
+
+        const PARAMS = [
+            "Auto Mode", "Pump ON T", "Pump OFF T", "Dry Retry T", 
+            "Upper Tank S", "Lower Tank S", "Power Delay", "Buzzer En", 
+            "Dual Tank", "Overload A", "Dry Run A", "Low Volt", "High Volt"
+        ];
+
+        function initParams() {
+            let html = "";
+            PARAMS.forEach((p, i) => {
+                const id = i + 1;
+                html += `
+                <div class="param-group">
+                    <div class="param-row">
+                        <div class="param-info">
+                            <div class="param-name">${p}</div>
+                            <div class="param-desc">Parameter P${id}</div>
+                        </div>
+                        <div class="param-ctrl">
+                            <input type="number" id="p-${id}" step="${(id==10||id==11)?'0.1':'1'}">
+                            <button class="set-mini-btn" onclick="saveParam(${id})">SET</button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('param-list').innerHTML = html;
+        }
+
+        function handleData(raw) {
+            if (raw.startsWith('P')) {
+                // Parameter Sync: P1:100
+                let [id, val] = raw.substring(1).split(':');
+                id = parseInt(id); val = parseFloat(val);
+                let el = document.getElementById('p-' + id);
+                if (el && document.activeElement !== el) {
+                    el.value = (id == 10 || id == 11) ? (val / 10).toFixed(1) : val;
+                }
+                return;
+            }
+
+            if (!raw.startsWith('$')) return;
+            // $230,120,1,360,0,6* -> Volts, Amps*10, State, Runtime, Fault, StatusBits
+            let data = raw.substring(1, raw.indexOf('*')).split(',');
+            if (data.length < 5) return;
+
+            const [v, a, s, rt, f, st] = data.map(Number);
+            
+            document.getElementById('v-val').innerText = v;
+            document.getElementById('a-val').innerText = (a / 10).toFixed(1);
+            
+            // Format Runtime
+            let h = Math.floor(rt / 60); let m = rt % 60;
+            document.getElementById('rt-val').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+
+            // Motor State
+            const states = ["MOTOR STANDBY", "MOTOR RUNNING", "POWER DELAY", "DRY RETRY"];
+            document.getElementById('m-status').innerText = states[s] || "SYSTEM ACTIVE";
+            document.getElementById('m-status').style.color = s == 1 ? "var(--success)" : (s > 1 ? "var(--warning)" : "rgba(255,255,255,0.4)");
+            document.getElementById('ring').className = s == 1 ? 'aura-ring active' : 'aura-ring';
+
+            // Tanks
+            const isFull = (st & 0x02); const isEmpty = (st & 0x04);
+            document.getElementById('tank-ut').className = isFull ? 'tank full' : 'tank';
+            document.getElementById('ut-lbl').innerText = isFull ? 'FULL' : 'OK';
+            document.getElementById('tank-lt').className = isEmpty ? 'tank empty' : 'tank';
+            document.getElementById('lt-lbl').innerText = isEmpty ? 'EMPTY' : 'OK';
+
+            // Faults
+            if (f > 0) {
+                const faults = ["", "HIGH VOLTAGE", "LOW VOLTAGE", "OVERLOAD TRIP", "DRY RUN TRIP", "SENSOR FAULT"];
+                document.getElementById('toast-msg').innerText = faults[f] || "HARDWARE FAULT";
+                toggleToast(true);
+            } else {
+                toggleToast(false);
+            }
+        }
+
+        function sendCmd(c) {
+            let msg = new Paho.MQTT.Message(c);
+            msg.destinationName = "puravi/command";
+            client.send(msg);
+        }
+
+        function saveParam(id) {
+            let val = document.getElementById('p-' + id).value;
+            if (id == 10 || id == 11) val = Math.round(val * 10);
+            let cmd = "W" + id.toString().padStart(2, '0') + val.toString().padStart(3, '0');
+            sendCmd(cmd);
+        }
+
+        function toggleSettings(show) {
+            document.getElementById('overlay-set').className = show ? 'overlay active' : 'overlay';
+            document.querySelectorAll('.nav-item')[0].className = show ? 'nav-item' : 'nav-item active';
+            document.querySelectorAll('.nav-item')[1].className = show ? 'nav-item active' : 'nav-item';
+            if (show) sendCmd('Q');
+        }
+
+        function toggleToast(show) {
+            document.getElementById('toast').className = show ? 'fault-toast active' : 'fault-toast';
+        }
+
+        window.onload = () => {
+            initParams();
+            connect();
+        };
+    </script>
+</body>
+</html>

@@ -632,7 +632,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.6";
+        const APP_VERSION = "2.0.7";
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -868,9 +868,18 @@
         }
 
         function sendCmd(c) {
+            if (!client || !client.isConnected()) {
+                updateStatus(false, "OFFLINE: DISPATCH FAILED");
+                return;
+            }
             let msg = new Paho.MQTT.Message(c);
             msg.destinationName = "puravi/command";
             client.send(msg);
+            
+            // Visual feedback for commands
+            document.getElementById('toast-msg').innerText = "DISPATCHING: " + (c=='G'?'START':(c=='S'?'STOP':'SYNC'));
+            toggleToast(true);
+            setTimeout(() => toggleToast(false), 2000);
         }
 
         function saveParam(id) {
@@ -930,7 +939,6 @@
         window.onload = () => {
             const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbx2rv5TvEPChUa5fsEk1vMLk_jGu5rhy0RFMU7ZA4tZdGMm5acWhDe5DgWaWnx4xljC/exec";
             
-            const APP_VERSION = "2.0.3";
             // Automatic version refresh logic
             if (localStorage.getItem('app_v') !== APP_VERSION) {
                 localStorage.setItem('app_v', APP_VERSION);
@@ -939,7 +947,8 @@
                     caches.delete('puravi-v2'),
                     caches.delete('puravi-v3'),
                     caches.delete('puravi-v4'),
-                    caches.delete('puravi-v5')
+                    caches.delete('puravi-v5'),
+                    caches.delete('puravi-v6')
                 ]).then(() => window.location.reload(true));
             }
             // Load saved state

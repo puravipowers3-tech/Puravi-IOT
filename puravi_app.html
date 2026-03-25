@@ -632,7 +632,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.5";
+        const APP_VERSION = "2.0.6";
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -828,7 +828,6 @@
             const states = ["MOTOR STANDBY", "MOTOR RUNNING", "POWER DELAY", "DRY RETRY"];
             document.getElementById('m-status').innerText = states[s] || "SYSTEM ACTIVE";
             document.getElementById('m-status').style.color = s == 1 ? "var(--success)" : (s > 1 ? "var(--warning)" : "rgba(255,255,255,0.4)");
-            document.getElementById('ring').className = s == 1 ? 'aura-ring active' : 'aura-ring';
 
             const isFull = (st & 0x02); const isEmpty = (st & 0x04);
             document.getElementById('tank-ut').className = isFull ? 'tank full' : 'tank';
@@ -939,7 +938,8 @@
                     caches.delete('puravi-v1'), 
                     caches.delete('puravi-v2'),
                     caches.delete('puravi-v3'),
-                    caches.delete('puravi-v4')
+                    caches.delete('puravi-v4'),
+                    caches.delete('puravi-v5')
                 ]).then(() => window.location.reload(true));
             }
             // Load saved state

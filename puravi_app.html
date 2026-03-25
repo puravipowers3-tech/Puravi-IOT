@@ -212,14 +212,23 @@
             margin-top: 25px;
         }
 
-        .mini-stat {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .mini-stat, .stat-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .neon-safe { box-shadow: 0 0 20px rgba(0,255,136,0.15) !important; border-color: rgba(0,255,136,0.3) !important; }
+        .neon-safe .v-display, .neon-safe .mini-val { color: var(--success) !important; text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+
+        .neon-warn { box-shadow: 0 0 30px rgba(255,165,0,0.2) !important; border-color: rgba(255,165,0,0.4) !important; }
+        .neon-warn .v-display, .neon-warn .mini-val { color: var(--warning) !important; text-shadow: 0 0 15px rgba(255,165,0,0.6); }
+
+        .neon-danger { box-shadow: 0 0 40px rgba(255,77,77,0.3) !important; border-color: rgba(255,77,77,0.5) !important; animation: glow-pulse 1.5s infinite; }
+        .neon-danger .v-display, .neon-danger .mini-val { color: #ff4d4d !important; text-shadow: 0 0 20px rgba(255,77,77,0.7); }
+
+        @keyframes glow-pulse {
+            0% { box-shadow: 0 0 20px rgba(255,77,77,0.2) !important; }
+            50% { box-shadow: 0 0 50px rgba(255,77,77,0.5) !important; }
+            100% { box-shadow: 0 0 20px rgba(255,77,77,0.2) !important; }
         }
 
         .mini-val {
@@ -491,7 +500,7 @@
                 <p><span id="dot" class="status-dot"></span> <span id="conn-lbl">ESTABLISHING LINK...</span></p>
             </div>
 
-            <div class="stat-card">
+            <div id="v-card" class="stat-card">
                 <div class="motor-aura">
                     <div id="ring" class="aura-ring"></div>
                     <div style="z-index:2">
@@ -505,7 +514,7 @@
                 </div>
 
                 <div class="stats-grid">
-                    <div class="mini-stat">
+                    <div id="a-card" class="mini-stat">
                         <span id="a-val" class="mini-val">0.0</span>
                         <span class="mini-lbl">Amps Load</span>
                     </div>
@@ -556,6 +565,21 @@
                 <!-- Parameters will be injected here -->
             </div>
             
+            <div class="param-group" style="margin-top:30px; border-color:var(--primary); background:rgba(0,210,255,0.05);">
+                <div class="param-name" style="color:var(--primary); font-size:16px;">☁️ CLOUD SETTINGS</div>
+                <div class="param-desc" style="margin-bottom:12px;">Google Sheets Webhook URL</div>
+                <input type="text" id="webhook-input" placeholder="Paste script URL here..." class="param-input" style="width:100% !important; text-align:left; font-size:12px; margin-bottom:10px;">
+                <button class="set-mini-btn" style="width:100%; height:45px;" onclick="saveWebhook()">SAVE WEBHOOK</button>
+            </div>
+
+            <div class="param-group" style="margin-top:20px;">
+                <div class="param-name">⚡ CUMULATIVE ENERGY</div>
+                <div class="param-row" style="align-items:center;">
+                    <div id="kwh-disp" style="font-size:32px; font-weight:800; color:var(--success);">0.0000 <span style="font-size:14px; opacity:0.6;">kWh</span></div>
+                    <button class="set-mini-btn" style="background:rgba(255,0,0,0.1); color:#ff4d4d; border-color:rgba(255,0,0,0.2); margin-left:auto;" onclick="resetEnergy()">RESET</button>
+                </div>
+            </div>
+            
             <div style="height:100px;"></div>
         </div>
     </div>
@@ -573,7 +597,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.1"; // Increment this to force reloads
+        const APP_VERSION = "2.0.2"; // Increment this for force-reloads
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -718,10 +742,24 @@
             if (data.length < 6) return;
 
             const [v, a, s, rt, f, st] = data.map(Number);
-            if (isNaN(v) || v > 500) return; // Garbage filter
+            if (isNaN(v) || v > 500) return; 
 
             document.getElementById('v-val').innerText = v;
             document.getElementById('a-val').innerText = (a / 10).toFixed(1);
+            
+            // Neon Logic for Voltage
+            let vCard = document.getElementById('v-card');
+            vCard.className = 'stat-card';
+            if (v < 170 || v > 260) vCard.classList.add('neon-danger');
+            else if (v < 190 || v > 240) vCard.classList.add('neon-warn');
+            else vCard.classList.add('neon-safe');
+
+            // Neon Logic for Amps
+            let aCard = document.getElementById('a-card');
+            aCard.className = 'stat-card';
+            if ((a/10) > 20) aCard.classList.add('neon-danger');
+            else if ((a/10) > 15) aCard.classList.add('neon-warn');
+            else aCard.classList.add('neon-safe');
             
             let now = Date.now();
             let deltaHours = (now - lastTimestamp) / (1000 * 3600);
@@ -748,6 +786,10 @@
                 toggleToast(true);
             } else { toggleToast(false); }
 
+            // Update kWh display
+            document.getElementById('kwh-disp').innerHTML = `${cumulativeKWh.toFixed(4)} <span style="font-size:14px; opacity:0.6;">kWh</span>`;
+            localStorage.setItem('puravi_kwh', cumulativeKWh);
+
             if (now - lastLogTime > 300000) {
                 logToCloud(v, a/10, cumulativeKWh);
                 lastLogTime = now;
@@ -757,7 +799,16 @@
         function logToCloud(v, a, kwh) {
             const WEBHOOK_URL = localStorage.getItem('webhook_url');
             if (!WEBHOOK_URL) return;
-            const data = { time: new Date().toISOString(), volts: v, amps: a, energy: kwh.toFixed(4) };
+            const states = ["Standby", "Running", "Power Delay", "Dry Retry"];
+            const currentStatus = states[document.getElementById('m-status').innerText.includes('RUNNING') ? 1 : 0]; // Simplified
+            const data = { 
+                time: new Date().toLocaleString(), 
+                volts: v, 
+                amps: a, 
+                energy: kwh.toFixed(4),
+                power: (v * a).toFixed(1),
+                status: document.getElementById('m-status').innerText 
+            };
             fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) }).catch(() => {});
         }
 
@@ -768,12 +819,28 @@
         }
 
         function saveParam(id) {
-            let val = document.getElementById('p-' + id).value;
+            let el = document.getElementById('p-' + id);
+            let val = el.value;
+            
+            // Validation: Don't send empty or invalid values
+            if (val === "" || (PARAMS[id-1].type === "time" && val === undefined)) {
+                alert("Please select a valid value!");
+                return;
+            }
+
             if (PARAMS[id-1].type === "time") val = timeToMcu(val);
             else if (id == 10 || id == 11) val = Math.round(val * 10);
             
+            // Format: W <2-digit ID> <4-digit Value>
             let cmd = "W" + id.toString().padStart(2, '0') + val.toString().padStart(4, '0');
             sendCmd(cmd);
+            
+            // Feedback
+            let btn = el.nextElementSibling;
+            if(btn) {
+                btn.innerText = "DONE";
+                setTimeout(() => btn.innerText = "SET", 1000);
+            }
         }
 
         function toggleSettings(show) {
@@ -787,12 +854,42 @@
             document.getElementById('toast').className = show ? 'fault-toast active' : 'fault-toast';
         }
 
+        function saveWebhook() {
+            const url = document.getElementById('webhook-input').value;
+            if (url.startsWith('https://script.google.com')) {
+                localStorage.setItem('webhook_url', url);
+                alert("Cloud Webhook Saved! Data will sync every 5 mins.");
+            } else {
+                alert("Invalid URL! Please paste the Google Web App URL.");
+            }
+        }
+
+        function resetEnergy() {
+            if (confirm("Reset cumulative kWh to 0?")) {
+                cumulativeKWh = 0;
+                localStorage.setItem('puravi_kwh', 0);
+                document.getElementById('kwh-disp').innerHTML = '0.0000 <span style="font-size:14px; opacity:0.6;">kWh</span>';
+            }
+        }
+
         window.onload = () => {
+            const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbx2rv5TvEPChUa5fsEk1vMLk_jGu5rhy0RFMU7ZA4tZdGMm5acWhDe5DgWaWnx4xljC/exec";
+            
             // Automatic version refresh logic
             if (localStorage.getItem('app_v') !== APP_VERSION) {
                 localStorage.setItem('app_v', APP_VERSION);
-                caches.delete('puravi-v1').then(() => window.location.reload(true));
+                caches.delete('puravi-v2').then(() => window.location.reload(true));
             }
+            // Load saved state
+            cumulativeKWh = parseFloat(localStorage.getItem('puravi_kwh') || 0);
+            
+            let savedUrl = localStorage.getItem('webhook_url');
+            if (!savedUrl || savedUrl === "") {
+                localStorage.setItem('webhook_url', DEFAULT_WEBHOOK);
+                savedUrl = DEFAULT_WEBHOOK;
+            }
+            document.getElementById('webhook-input').value = savedUrl;
+            
             initParams(); 
             connect(); 
         };

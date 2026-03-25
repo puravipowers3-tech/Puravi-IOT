@@ -625,7 +625,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.2.0";
+        const APP_VERSION = "2.2.2";
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -753,17 +753,33 @@
         }
 
         function handleData(raw) {
-            // Parameter Sync Pulse
+            // Bulk Sync Handler: $S,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13*
+            if (raw.startsWith('$S')) {
+                let match = raw.match(/\$S,([0-9,.-]+)\*/);
+                if (!match) return;
+                let values = match[1].split(',').map(Number);
+                values.forEach((v, i) => {
+                    const id = i + 1;
+                    if (id > PARAMS.length) return;
+                    let el = document.getElementById('p-' + id);
+                    if (el && document.activeElement !== el) {
+                        if (PARAMS[i].type === "time") el.value = mcuToTime(v);
+                        else if (id == 10 || id == 11) el.value = (v / 10).toFixed(1);
+                        else el.value = v;
+                        updateColors(el);
+                    }
+                });
+                return;
+            }
+
+            // Single Pulse Handler: !W:ID:VAL or P1:1 Pulse
             if (raw.includes('P') || raw.includes('!') || raw.includes('W')) {
-                let match = raw.match(/[!PW](\d+):(-?\d+\.?\d*)/);
+                let match = raw.match(/[!PW].*?(\d+):(-?\d+\.?\d*)/);
                 if (!match) return;
                 let id = parseInt(match[1]);
                 let val = parseFloat(match[2]);
 
-                // STRICT BOUNDS CHECKING (Prevent garbage values like 10 or -6)
                 if (id < 1 || id > PARAMS.length) return;
-                if (val > PARAMS[id-1].max || val < 0) return;
-
                 let el = document.getElementById('p-' + id);
                 if (el && document.activeElement !== el) {
                     if (PARAMS[id-1].type === "time") el.value = mcuToTime(val);

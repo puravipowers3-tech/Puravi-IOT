@@ -579,41 +579,32 @@
                 .then(() => console.log("Service Worker Registered"));
         }
 
-        // MQTT Configuration
         const BROKER = "cadeb3d01f724103a90d8399337dfd15.s1.eu.hivemq.cloud";
         const PORT = 8884;
         const USER = "PuraviPowers";
         const PASS = "Puravipowers@1231";
         
         let client;
+        let cumulativeKWh = 0;
+        let lastTimestamp = Date.now();
+        let lastLogTime = 0;
 
         function connect() {
             const clientId = "puravi_" + Math.random().toString(16).substr(2, 6);
-            console.log("Connecting as " + clientId);
-            
             client = new Paho.MQTT.Client(BROKER, PORT, clientId);
-            
             client.onConnectionLost = (rsp) => {
-                console.log("Connection Lost: " + rsp.errorMessage);
                 updateStatus(false, "LINK SEVERED - RETRYING...");
                 setTimeout(connect, 3000);
             };
-
-            client.onMessageArrived = (msg) => {
-                handleData(msg.payloadString);
-            };
-
+            client.onMessageArrived = (msg) => handleData(msg.payloadString);
             client.connect({
-                useSSL: true,
-                userName: USER,
-                password: PASS,
+                useSSL: true, userName: USER, password: PASS,
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
-                    sendCmd('Q'); // Initial sync request
+                    sendCmd('Q');
                 },
-                onFailure: (err) => {
-                    console.log("Connect Failed:", err);
+                onFailure: () => {
                     updateStatus(false, "CLOUD LINK FAILED");
                     setTimeout(connect, 5000);
                 }
@@ -626,24 +617,45 @@
         }
 
         const PARAMS = [
-            "Auto Mode", "Pump ON T", "Pump OFF T", "Dry Retry T", 
-            "Upper Tank S", "Lower Tank S", "Power Delay", "Buzzer En", 
-            "Dual Tank", "Overload A", "Dry Run A", "Low Volt", "High Volt"
+            { name: "Auto Mode", type: "select", options: ["Manual", "Auto"] },
+            { name: "Pump ON T", type: "time" },
+            { name: "Pump OFF T", type: "time" },
+            { name: "Dry Retry T", type: "number", unit: "s" },
+            { name: "Upper Tank S", type: "select", options: ["Off", "On"] },
+            { name: "Lower Tank S", type: "select", options: ["Off", "On"] },
+            { name: "Power Delay", type: "number", unit: "s" },
+            { name: "Buzzer En", type: "select", options: ["Off", "On"] },
+            { name: "Dual Tank", type: "select", options: ["Single", "Dual"] },
+            { name: "Overload A", type: "number", unit: "A", step: 0.1 },
+            { name: "Dry Run A", type: "number", unit: "A", step: 0.1 },
+            { name: "Low Volt", type: "number", unit: "V" },
+            { name: "High Volt", type: "number", unit: "V" }
         ];
 
         function initParams() {
             let html = "";
             PARAMS.forEach((p, i) => {
                 const id = i + 1;
+                let inputHtml = "";
+                if (p.type === "select") {
+                    inputHtml = `<select id="p-${id}" class="param-input">`;
+                    p.options.forEach((opt, idx) => { inputHtml += `<option value="${idx}">${opt}</option>`; });
+                    inputHtml += `</select>`;
+                } else if (p.type === "time") {
+                    inputHtml = `<input type="time" id="p-${id}" class="param-input">`;
+                } else {
+                    inputHtml = `<input type="number" id="p-${id}" step="${p.step||1}" class="param-input">`;
+                }
+
                 html += `
-                <div class="param-group">
+                <div class="param-group" id="group-${id}">
                     <div class="param-row">
                         <div class="param-info">
-                            <div class="param-name">${p}</div>
+                            <div class="param-name">${p.name}</div>
                             <div class="param-desc">Parameter P${id}</div>
                         </div>
                         <div class="param-ctrl">
-                            <input type="number" id="p-${id}" step="${(id==10||id==11)?'0.1':'1'}">
+                            ${inputHtml}
                             <button class="set-mini-btn" onclick="saveParam(${id})">SET</button>
                         </div>
                     </div>
@@ -652,56 +664,99 @@
             document.getElementById('param-list').innerHTML = html;
         }
 
+        // Format raw MCU value (like 1230) to HH:MM string
+        function mcuToTime(val) {
+            let hh = Math.floor(val / 100);
+            let mm = val % 100;
+            return `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}`;
+        }
+
+        // Format HH:MM string to raw MCU value (like 1230)
+        function timeToMcu(str) {
+            let [h, m] = str.split(':');
+            return parseInt(h) * 100 + parseInt(m);
+        }
+
         function handleData(raw) {
-            if (raw.startsWith('P')) {
-                // Parameter Sync: P1:100
-                let [id, val] = raw.substring(1).split(':');
-                id = parseInt(id); val = parseFloat(val);
+            // Parameter Sync Pulse (ADT Feedback)
+            if (raw.startsWith('P') || raw.startsWith('!') || raw.startsWith('W')) {
+                let parts = raw.replace(/[!W]/g, '').substring(1).split(':');
+                if (parts.length < 2) return;
+                let id = parseInt(parts[0]);
+                let val = parseFloat(parts[1]);
                 let el = document.getElementById('p-' + id);
                 if (el && document.activeElement !== el) {
-                    el.value = (id == 10 || id == 11) ? (val / 10).toFixed(1) : val;
+                    if (PARAMS[id-1].type === "time") el.value = mcuToTime(val);
+                    else if (id == 10 || id == 11) el.value = (val / 10).toFixed(1);
+                    else el.value = val;
+                }
+                // Visual Pulse (ADT Feedback)
+                let group = document.getElementById('group-' + id);
+                if (group) {
+                    group.style.borderColor = "var(--success)";
+                    group.style.boxShadow = "0 0 20px rgba(0,255,136,0.2)";
+                    setTimeout(() => { group.style.borderColor = "var(--glass-border)"; group.style.boxShadow = "none"; }, 1000);
                 }
                 return;
             }
 
             if (!raw.startsWith('$')) return;
-            // $230,120,1,360,0,6* -> Volts, Amps*10, State, Runtime, Fault, StatusBits
             let data = raw.substring(1, raw.indexOf('*')).split(',');
-            if (data.length < 5) return;
+            if (data.length < 6) return;
 
             const [v, a, s, rt, f, st] = data.map(Number);
-            
-            // Safety: If data is corrupt (NaN), don't update display
             if (isNaN(v)) return;
 
             document.getElementById('v-val').innerText = v;
             document.getElementById('a-val').innerText = (a / 10).toFixed(1);
             
-            // Format Runtime
-            let h = Math.floor(rt / 60); let m = rt % 60;
-            document.getElementById('rt-val').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            // kWh Calculation
+            let now = Date.now();
+            let deltaHours = (now - lastTimestamp) / (1000 * 3600);
+            if (s === 1) { // Running
+                cumulativeKWh += (v * (a / 10) * deltaHours) / 1000;
+            }
+            lastTimestamp = now;
 
-            // Motor State
+            // Update UI with Run Time and kWh (Toggle display occasionally or keep both)
+            let h = Math.floor(rt / 3600); let m = Math.floor((rt % 3600) / 60);
+            document.getElementById('rt-val').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            
+            // Add kWh to a small label if needed (e.g. replacing a-val unit or similar)
+            // For now, let's keep it simple.
+
             const states = ["MOTOR STANDBY", "MOTOR RUNNING", "POWER DELAY", "DRY RETRY"];
             document.getElementById('m-status').innerText = states[s] || "SYSTEM ACTIVE";
             document.getElementById('m-status').style.color = s == 1 ? "var(--success)" : (s > 1 ? "var(--warning)" : "rgba(255,255,255,0.4)");
             document.getElementById('ring').className = s == 1 ? 'aura-ring active' : 'aura-ring';
 
-            // Tanks
             const isFull = (st & 0x02); const isEmpty = (st & 0x04);
             document.getElementById('tank-ut').className = isFull ? 'tank full' : 'tank';
             document.getElementById('ut-lbl').innerText = isFull ? 'FULL' : 'OK';
             document.getElementById('tank-lt').className = isEmpty ? 'tank empty' : 'tank';
             document.getElementById('lt-lbl').innerText = isEmpty ? 'EMPTY' : 'OK';
 
-            // Faults
             if (f > 0) {
                 const faults = ["", "HIGH VOLTAGE", "LOW VOLTAGE", "OVERLOAD TRIP", "DRY RUN TRIP", "SENSOR FAULT"];
                 document.getElementById('toast-msg').innerText = faults[f] || "HARDWARE FAULT";
                 toggleToast(true);
-            } else {
-                toggleToast(false);
+            } else { toggleToast(false); }
+
+            // Log to Google Sheets every 5 minutes
+            if (now - lastLogTime > 300000) {
+                logToCloud(v, a/10, cumulativeKWh);
+                lastLogTime = now;
             }
+        }
+
+        function logToCloud(v, a, kwh) {
+            // Replace with your Google Apps Script Webhook URL
+            const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz_XXXXXXXXX/exec";
+            const data = { time: new Date().toISOString(), volts: v, amps: a, energy: kwh.toFixed(4) };
+            fetch(WEBHOOK_URL, { 
+                method: 'POST', mode: 'no-cors', 
+                body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } 
+            }).catch(e => console.log("Cloud log failed", e));
         }
 
         function sendCmd(c) {
@@ -712,8 +767,11 @@
 
         function saveParam(id) {
             let val = document.getElementById('p-' + id).value;
-            if (id == 10 || id == 11) val = Math.round(val * 10);
-            let cmd = "W" + id.toString().padStart(2, '0') + val.toString().padStart(3, '0');
+            if (PARAMS[id-1].type === "time") val = timeToMcu(val);
+            else if (id == 10 || id == 11) val = Math.round(val * 10);
+            
+            // Format: W <2-digit ID> <4-digit Value>
+            let cmd = "W" + id.toString().padStart(2, '0') + val.toString().padStart(4, '0');
             sendCmd(cmd);
         }
 
@@ -721,17 +779,14 @@
             document.getElementById('overlay-set').className = show ? 'overlay active' : 'overlay';
             document.querySelectorAll('.nav-item')[0].className = show ? 'nav-item' : 'nav-item active';
             document.querySelectorAll('.nav-item')[1].className = show ? 'nav-item active' : 'nav-item';
-            if (show) sendCmd('Q');
+            if (show) sendCmd('S'); // Request config sync
         }
 
         function toggleToast(show) {
             document.getElementById('toast').className = show ? 'fault-toast active' : 'fault-toast';
         }
 
-        window.onload = () => {
-            initParams();
-            connect();
-        };
+        window.onload = () => { initParams(); connect(); };
     </script>
 </body>
 </html>

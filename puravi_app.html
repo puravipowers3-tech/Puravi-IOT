@@ -584,20 +584,25 @@
         const PORT = 8884;
         const USER = "PuraviPowers";
         const PASS = "Puravipowers@1231";
-        const CLIENT_ID = "puravi_app_" + Math.random().toString(16).substr(2, 4);
-
-        let client = new Paho.MQTT.Client(BROKER, PORT, CLIENT_ID);
         
-        client.onConnectionLost = (rsp) => {
-            updateStatus(false, "LINK SEVERED - RETRYING");
-            setTimeout(connect, 3000);
-        };
-
-        client.onMessageArrived = (msg) => {
-            handleData(msg.payloadString);
-        };
+        let client;
 
         function connect() {
+            const clientId = "puravi_" + Math.random().toString(16).substr(2, 6);
+            console.log("Connecting as " + clientId);
+            
+            client = new Paho.MQTT.Client(BROKER, PORT, clientId);
+            
+            client.onConnectionLost = (rsp) => {
+                console.log("Connection Lost: " + rsp.errorMessage);
+                updateStatus(false, "LINK SEVERED - RETRYING...");
+                setTimeout(connect, 3000);
+            };
+
+            client.onMessageArrived = (msg) => {
+                handleData(msg.payloadString);
+            };
+
             client.connect({
                 useSSL: true,
                 userName: USER,
@@ -605,10 +610,11 @@
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
-                    sendCmd('Q'); // Initial sync
+                    sendCmd('Q'); // Initial sync request
                 },
-                onFailure: () => {
-                    updateStatus(false, "CONNECTION FAILED");
+                onFailure: (err) => {
+                    console.log("Connect Failed:", err);
+                    updateStatus(false, "CLOUD LINK FAILED");
                     setTimeout(connect, 5000);
                 }
             });
@@ -665,6 +671,9 @@
 
             const [v, a, s, rt, f, st] = data.map(Number);
             
+            // Safety: If data is corrupt (NaN), don't update display
+            if (isNaN(v)) return;
+
             document.getElementById('v-val').innerText = v;
             document.getElementById('a-val').innerText = (a / 10).toFixed(1);
             

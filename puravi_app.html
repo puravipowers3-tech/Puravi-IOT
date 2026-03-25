@@ -189,32 +189,51 @@
             to { transform: rotate(360deg); }
         }
 
-        .v-display {
-            font-size: 64px;
-            font-weight: 800;
-            line-height: 1;
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            color: #ffffff;
+        /* Premium Circular Gauges */
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .unit-lbl {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            color: rgba(255,255,255,0.3);
-            margin-top: 5px;
+        .gauge-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 25px;
+        .gauge-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.05);
+            stroke-width: 8;
         }
 
-        .mini-stat, .stat-card {
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        .gauge-bar {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.1, 0.7, 1.0, 0.1), stroke 0.4s ease;
+        }
+
+        .gauge-pulse {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-ring {
+            0% { filter: drop-shadow(0 0 5px var(--primary)); opacity: 0.8; }
+            50% { filter: drop-shadow(0 0 20px var(--primary)); opacity: 1; }
+            100% { filter: drop-shadow(0 0 5px var(--primary)); opacity: 0.8; }
+        }
+
+        .gauge-val-group {
+            position: absolute;
+            text-align: center;
+            z-index: 5;
         }
 
         .neon-safe { box-shadow: 0 0 20px rgba(0,255,136,0.15) !important; border-color: rgba(0,255,136,0.3) !important; }
@@ -501,27 +520,42 @@
                 <p><span id="dot" class="status-dot"></span> <span id="conn-lbl">ESTABLISHING LINK...</span></p>
             </div>
 
-            <div id="v-card" class="stat-card">
-                <div class="motor-aura">
-                    <div id="ring" class="aura-ring"></div>
-                    <div style="z-index:2">
-                        <p id="v-val" class="v-display">0</p>
-                        <p class="unit-lbl">Volts AC</p>
+            <div id="v-card" class="stat-card" style="padding:40px 20px;">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 100 100">
+                        <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                        <circle id="v-gauge" class="gauge-bar" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"></circle>
+                    </svg>
+                    <div class="gauge-val-group">
+                        <p id="v-val" style="font-size:54px; font-weight:800; margin:0;">0</p>
+                        <p class="unit-lbl" style="margin:0;">VOLTS AC</p>
                     </div>
                 </div>
-                
-                <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:2px;" id="m-status">
+
+                <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:2px; margin-top:25px;" id="m-status">
                     MOTOR STANDBY
                 </div>
 
                 <div class="stats-grid">
-                    <div id="a-card" class="mini-stat">
-                        <span id="a-val" class="mini-val">0.0</span>
-                        <span class="mini-lbl">Amps Load</span>
+                    <div class="gauge-container" style="width:120px; height:120px;" id="a-card">
+                        <svg class="gauge-svg" viewBox="0 0 100 100">
+                            <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                            <circle id="a-gauge" class="gauge-bar" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283" style="stroke:var(--success)"></circle>
+                        </svg>
+                        <div class="gauge-val-group">
+                            <p id="a-val" style="font-size:24px; font-weight:800; margin:0;">0.0</p>
+                            <p style="font-size:8px; opacity:0.4; margin:0;">AMPS</p>
+                        </div>
                     </div>
-                    <div class="mini-stat">
-                        <span id="rt-val" class="mini-val">00:00</span>
-                        <span class="mini-lbl">Run Duration</span>
+                    <div class="gauge-container" style="width:120px; height:120px;">
+                        <svg class="gauge-svg" viewBox="0 0 100 100">
+                            <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                            <circle id="rt-gauge" class="gauge-bar" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="50" style="stroke:rgba(255,255,255,0.2)"></circle>
+                        </svg>
+                        <div class="gauge-val-group">
+                            <p id="rt-val" style="font-size:20px; font-weight:800; margin:0;">00:00</p>
+                            <p style="font-size:8px; opacity:0.4; margin:0;">DURATION</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -598,7 +632,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.2"; // Increment this for force-reloads
+        const APP_VERSION = "2.0.4"; // Increment for final UI fixes
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -750,27 +784,42 @@
             document.getElementById('v-val').innerText = v;
             document.getElementById('a-val').innerText = (a / 10).toFixed(1);
             
-            // Neon Logic for Voltage
-            let vCard = document.getElementById('v-card');
-            vCard.className = 'stat-card';
-            if (v < 170 || v > 260) vCard.classList.add('neon-danger');
-            else if (v < 190 || v > 240) vCard.classList.add('neon-warn');
-            else vCard.classList.add('neon-safe');
+            // Gauge Logic
+            const vOffset = 283 - (Math.min(v, 300) / 300) * 283;
+            document.getElementById('v-gauge').style.strokeDashoffset = vOffset;
+            const aOffset = 283 - (Math.min(a / 10, 50) / 50) * 283;
+            document.getElementById('a-gauge').style.strokeDashoffset = aOffset;
 
-            // Neon Logic for Amps
-            let aCard = document.getElementById('a-card');
-            aCard.className = 'stat-card';
-            if ((a/10) > 20) aCard.classList.add('neon-danger');
-            else if ((a/10) > 15) aCard.classList.add('neon-warn');
-            else aCard.classList.add('neon-safe');
-            
+            // Status & Pulsing Logic
+            let vGauge = document.getElementById('v-gauge');
+            let aGauge = document.getElementById('a-gauge');
+            if (s === 1) {
+                vGauge.classList.add('gauge-pulse');
+                aGauge.classList.add('gauge-pulse');
+            } else {
+                vGauge.classList.remove('gauge-pulse');
+                aGauge.classList.remove('gauge-pulse');
+            }
+
+            // Neon Colors
+            if (v < 170 || v > 260) vGauge.style.stroke = "#ff4d4d";
+            else if (v < 190 || v > 240) vGauge.style.stroke = "orange";
+            else vGauge.style.stroke = "var(--primary)";
+
+            if ((a/10) > 20) aGauge.style.stroke = "#ff4d4d";
+            else aGauge.style.stroke = "var(--success)";
+
             let now = Date.now();
             let deltaHours = (now - lastTimestamp) / (1000 * 3600);
             if (s === 1) cumulativeKWh += (v * (a / 10) * deltaHours) / 1000;
             lastTimestamp = now;
 
-            let h = Math.floor(rt / 3600); let m = Math.floor((rt % 3600) / 60);
-            document.getElementById('rt-val').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            // FIX: Robust Time Duration Format (Seconds to H:MM)
+            const safeRt = isNaN(rt) || rt > 864000 ? 0 : rt; // Cap at 10 days
+            let hours = Math.floor(safeRt / 3600);
+            let mins = Math.floor((safeRt % 3600) / 60);
+            document.getElementById('rt-val').innerText = `${hours}:${mins.toString().padStart(2, '0')}`;
+            document.getElementById('rt-gauge').style.strokeDashoffset = 283 - (Math.min(mins, 60) / 60) * 283;
             
             const states = ["MOTOR STANDBY", "MOTOR RUNNING", "POWER DELAY", "DRY RETRY"];
             document.getElementById('m-status').innerText = states[s] || "SYSTEM ACTIVE";
@@ -900,4 +949,3 @@
     </script>
 </body>
 </html>
-

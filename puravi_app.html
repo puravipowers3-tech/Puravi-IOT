@@ -632,7 +632,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.4"; // Increment for final UI fixes
+        const APP_VERSION = "2.0.5";
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -660,23 +660,27 @@
         let lastLogTime = 0;
 
         function connect() {
-            const clientId = "puravi_" + Math.random().toString(16).substr(2, 6);
+            const clientId = "p_u_" + Math.random().toString(16).substr(2, 4);
             client = new Paho.MQTT.Client(BROKER, PORT, clientId);
             client.onConnectionLost = (rsp) => {
-                updateStatus(false, "LINK SEVERED - RETRYING...");
-                setTimeout(connect, 3000);
+                let reason = rsp.errorMessage || "Network Error";
+                updateStatus(false, "LINK SEVERED: " + reason);
+                setTimeout(connect, 5000);
             };
             client.onMessageArrived = (msg) => handleData(msg.payloadString);
             client.connect({
                 useSSL: true, userName: USER, password: PASS,
+                timeout: 10,
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
                     sendCmd('Q');
                 },
-                onFailure: () => {
-                    updateStatus(false, "CLOUD LINK FAILED");
-                    setTimeout(connect, 5000);
+                onFailure: (err) => {
+                    let msg = err.errorMessage || "Unknown Error";
+                    if (msg.includes("AMQJSC0001E")) msg = "WRONG PASSWORD/USER";
+                    updateStatus(false, "CLOUD FAILED: " + msg);
+                    setTimeout(connect, 10000);
                 }
             });
         }
@@ -931,7 +935,12 @@
             // Automatic version refresh logic
             if (localStorage.getItem('app_v') !== APP_VERSION) {
                 localStorage.setItem('app_v', APP_VERSION);
-                Promise.all([caches.delete('puravi-v1'), caches.delete('puravi-v2')]).then(() => window.location.reload(true));
+                Promise.all([
+                    caches.delete('puravi-v1'), 
+                    caches.delete('puravi-v2'),
+                    caches.delete('puravi-v3'),
+                    caches.delete('puravi-v4')
+                ]).then(() => window.location.reload(true));
             }
             // Load saved state
             cumulativeKWh = parseFloat(localStorage.getItem('puravi_kwh') || 0);

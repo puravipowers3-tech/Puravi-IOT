@@ -195,6 +195,7 @@
             line-height: 1;
             margin: 0;
             font-family: 'Inter', sans-serif;
+            color: #ffffff;
         }
 
         .unit-lbl {
@@ -712,11 +713,11 @@
 
         function handleData(raw) {
             // Parameter Sync Pulse
-            if (raw.startsWith('P') || raw.startsWith('!') || raw.startsWith('W')) {
-                let parts = raw.replace(/[!W]/g, '').substring(1).split(':');
-                if (parts.length < 2) return;
-                let id = parseInt(parts[0]);
-                let val = parseFloat(parts[1]);
+            if (raw.includes('P') || raw.includes('!') || raw.includes('W')) {
+                let match = raw.match(/[!PW](\d+):(-?\d+\.?\d*)/);
+                if (!match) return;
+                let id = parseInt(match[1]);
+                let val = parseFloat(match[2]);
 
                 // STRICT BOUNDS CHECKING (Prevent garbage values like 10 or -6)
                 if (id < 1 || id > PARAMS.length) return;
@@ -737,12 +738,14 @@
                 return;
             }
 
-            if (!raw.startsWith('$')) return;
-            let data = raw.substring(1, raw.indexOf('*')).split(',');
+            // Telemetry Parsing ($V,A,S,RT,F,ST*)
+            let tMatch = raw.match(/\$([0-9,.-]+)\*/);
+            if (!tMatch) return;
+            let data = tMatch[1].split(',').map(Number);
             if (data.length < 6) return;
 
-            const [v, a, s, rt, f, st] = data.map(Number);
-            if (isNaN(v) || v > 500) return; 
+            const [v, a, s, rt, f, st] = data;
+            if (isNaN(v) || v > 550) return; 
 
             document.getElementById('v-val').innerText = v;
             document.getElementById('a-val').innerText = (a / 10).toFixed(1);
@@ -875,10 +878,11 @@
         window.onload = () => {
             const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbx2rv5TvEPChUa5fsEk1vMLk_jGu5rhy0RFMU7ZA4tZdGMm5acWhDe5DgWaWnx4xljC/exec";
             
+            const APP_VERSION = "2.0.3";
             // Automatic version refresh logic
             if (localStorage.getItem('app_v') !== APP_VERSION) {
                 localStorage.setItem('app_v', APP_VERSION);
-                caches.delete('puravi-v2').then(() => window.location.reload(true));
+                Promise.all([caches.delete('puravi-v1'), caches.delete('puravi-v2')]).then(() => window.location.reload(true));
             }
             // Load saved state
             cumulativeKWh = parseFloat(localStorage.getItem('puravi_kwh') || 0);
@@ -896,3 +900,4 @@
     </script>
 </body>
 </html>
+

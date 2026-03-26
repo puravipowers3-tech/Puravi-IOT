@@ -800,13 +800,10 @@
             let tMatch = raw.match(/\$([0-9,.-]+)\*/);
             if (!tMatch) return;
             let data = tMatch[1].split(',').map(Number);
-            // STM8 sends 5 fields: $Volts,Amps,State,RunSec,Fault*
-            if (data.length < 5) return;
+            // flt.c sends: $Volts,Amps,State,RunSec,Fault,Status* = 5 commas = 6 fields
+            if (data.length < 6) return;
 
-            const [v, a, s, rt, f] = data;
-            // Derive status text from numeric fields
-            const statusTxt = f > 0 ? ['','HV TRIP','LV TRIP','OC TRIP','DRY RUN','UPPER FULL','LOWER EMPTY'][f] || 'FAULT'
-                            : s === 1 ? 'RUNNING' : s === 2 ? 'STARTING' : 'STANDBY';
+            const [v, a, s, rt, f, st] = data;
             if (isNaN(v) || v > 550) return; 
 
             document.getElementById('v-val').innerText = v;
@@ -853,7 +850,7 @@
             document.getElementById('m-status').innerText = states[s] || "SYSTEM ACTIVE";
             document.getElementById('m-status').style.color = s == 1 ? "var(--success)" : (s > 1 ? "var(--warning)" : "rgba(255,255,255,0.4)");
 
-            const isFull = (f === 5); const isEmpty = (f === 6);
+            const isFull = (st & 0x02); const isEmpty = (st & 0x04);
             document.getElementById('tank-ut').className = isFull ? 'tank full' : 'tank';
             document.getElementById('ut-lbl').innerText = isFull ? 'FULL' : 'OK';
             document.getElementById('tank-lt').className = isEmpty ? 'tank empty' : 'tank';

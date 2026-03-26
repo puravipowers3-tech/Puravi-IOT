@@ -914,8 +914,8 @@
             let el = document.getElementById('p-' + id);
             let val = el.value;
             
-            // Validation: Don't send empty or invalid values
-            if (val === "" || (PARAMS[id-1].type === "time" && val === undefined)) {
+            // Validation: Use strict check — val=0 (Disable) must NOT be rejected!
+            if (val.toString().trim() === "" || (PARAMS[id-1].type === "time" && val === undefined)) {
                 alert("Please select a valid value!");
                 return;
             }

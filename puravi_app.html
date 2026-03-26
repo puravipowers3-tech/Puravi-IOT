@@ -899,6 +899,8 @@
             // Add '$' prefix for STM8 protocol
             let msg = new Paho.MQTT.Message('$' + c);
             msg.destinationName = "puravi/command";
+            msg.retained = false; // CRITICAL: Prevent HiveMQ from replaying on reconnect!
+            msg.qos = 0;         // Fire-and-forget — no re-delivery of stale commands
             
             // Single precise send — STM8 'G' command sets state directly (NOT a toggle)
             // Sending multiple times causes rapid timer resets and motor flicker
@@ -939,7 +941,7 @@
             document.getElementById('overlay-set').className = show ? 'overlay active' : 'overlay';
             document.querySelectorAll('.nav-item')[0].className = show ? 'nav-item' : 'nav-item active';
             document.querySelectorAll('.nav-item')[1].className = show ? 'nav-item active' : 'nav-item';
-            if (show) sendCmd('S'); 
+            if (show) sendCmd('Q'); // Send QUERY (NOT Stop!) to sync settings from STM8
         }
 
         function toggleToast(show) {

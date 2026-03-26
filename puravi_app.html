@@ -667,7 +667,10 @@
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
-                    sendCmd('Q');
+                    // Force zero display to remove "ESTABLISHING" blur/overlay
+                    document.getElementById('v-val').innerText = "0";
+                    document.getElementById('a-val').innerText = "0.0";
+                    sendCmd('Q'); // Initial Sync
                 },
                 onFailure: (err) => {
                     let msg = err.errorMessage || "Unknown Error";
@@ -753,6 +756,17 @@
         }
 
         function handleData(raw) {
+            // New Diagnostic Handlers
+            if (raw.includes("ESP32 RECONNECTED")) {
+                showToast("HARDWARE: RECONNECTED");
+                updateStatus(true, "LINK ACTIVE");
+                return;
+            }
+            if (raw.includes("STALE START IGNORED")) {
+                showToast("SECURITY: STALE START BLOCKED");
+                return;
+            }
+
             // Bulk Sync Handler: $S,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13*
             if (raw.startsWith('$S')) {
                 let match = raw.match(/\$S,([0-9,.-]+)\*/);
@@ -904,9 +918,13 @@
             client.send(msg);
             
             // Visual feedback for commands
-            document.getElementById('toast-msg').innerText = "DISPATCHING: " + (c=='G'?'START':(c=='S'?'STOP':'SYNC'));
+            showToast("DISPATCHING: " + (c=='G'?'START':(c=='S'?'STOP':'SYNC')));
+        }
+
+        function showToast(msg) {
+            document.getElementById('toast-msg').innerText = msg;
             toggleToast(true);
-            setTimeout(() => toggleToast(false), 2000);
+            setTimeout(() => toggleToast(false), 3000);
         }
 
         function saveParam(id) {

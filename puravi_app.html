@@ -800,9 +800,13 @@
             let tMatch = raw.match(/\$([0-9,.-]+)\*/);
             if (!tMatch) return;
             let data = tMatch[1].split(',').map(Number);
-            if (data.length < 6) return;
+            // STM8 sends 5 fields: $Volts,Amps,State,RunSec,Fault*
+            if (data.length < 5) return;
 
-            const [v, a, s, rt, f, st] = data;
+            const [v, a, s, rt, f] = data;
+            // Derive status text from numeric fields
+            const statusTxt = f > 0 ? ['','HV TRIP','LV TRIP','OC TRIP','DRY RUN','UPPER FULL','LOWER EMPTY'][f] || 'FAULT'
+                            : s === 1 ? 'RUNNING' : s === 2 ? 'STARTING' : 'STANDBY';
             if (isNaN(v) || v > 550) return; 
 
             document.getElementById('v-val').innerText = v;
@@ -849,7 +853,7 @@
             document.getElementById('m-status').innerText = states[s] || "SYSTEM ACTIVE";
             document.getElementById('m-status').style.color = s == 1 ? "var(--success)" : (s > 1 ? "var(--warning)" : "rgba(255,255,255,0.4)");
 
-            const isFull = (st & 0x02); const isEmpty = (st & 0x04);
+            const isFull = (f === 5); const isEmpty = (f === 6);
             document.getElementById('tank-ut').className = isFull ? 'tank full' : 'tank';
             document.getElementById('ut-lbl').innerText = isFull ? 'FULL' : 'OK';
             document.getElementById('tank-lt').className = isEmpty ? 'tank empty' : 'tank';
@@ -896,11 +900,9 @@
             let msg = new Paho.MQTT.Message('$' + c);
             msg.destinationName = "puravi/command";
             
-            // SUPER HARDENED DISPATCH: Send 5 times with 30ms gaps
-            // This forces the STM8 to capture the command even if it's currently busy with ADC or Display scanning
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => client.send(msg), i * 35);
-            }
+            // Single precise send — STM8 'G' command sets state directly (NOT a toggle)
+            // Sending multiple times causes rapid timer resets and motor flicker
+            client.send(msg);
             
             // Visual feedback for commands
             document.getElementById('toast-msg').innerText = "DISPATCHING: " + (c=='G'?'START':(c=='S'?'STOP':'SYNC'));

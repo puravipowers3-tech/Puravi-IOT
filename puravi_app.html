@@ -927,14 +927,23 @@
             fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) }).catch(() => {});
         }
 
+        let cmdLockout = false;
+
         function sendCmd(c) {
             if (!client || !client.isConnected()) {
                 updateStatus(false, "OFFLINE: DISPATCH FAILED");
                 return;
             }
 
-            // Button Debounce & Visual Feedback
             if (c === 'G' || c === 'S') {
+                if (cmdLockout) {
+                    showToast("PROTECTING MOTOR: PLEASE WAIT...");
+                    return;
+                }
+                cmdLockout = true;
+                setTimeout(() => cmdLockout = false, 10000);
+
+                // Disable buttons to match lockout time
                 const btns = document.querySelectorAll('.btn-action');
                 btns.forEach(b => {
                     b.style.opacity = "0.5";
@@ -945,19 +954,33 @@
                         b.style.opacity = "1";
                         b.style.pointerEvents = "auto";
                     });
-                }, 1000); // 1s lock for snabbiness
-            }
+                }, 10000);
 
-            // Add '$' prefix for STM8 protocol
-            let msg = new Paho.MQTT.Message('$' + c);
-            msg.destinationName = "puravi/command";
-            msg.retained = false; // CRITICAL: Prevent HiveMQ from replaying on reconnect!
-            msg.qos = 0;         // Fire-and-forget — no re-delivery of stale commands
-            
-            client.send(msg);
-            
-            // Visual feedback for commands
-            showToast("DISPATCHING: " + (c=='G'?'START':(c=='S'?'STOP':'SYNC')));
+                // Clear retained ONLY for motor commands
+                let clearMsg = new Paho.MQTT.Message('');
+                clearMsg.destinationName = "puravi/command";
+                clearMsg.retained = true;
+                clearMsg.qos = 1;
+                client.send(clearMsg);
+
+                setTimeout(() => {
+                    let msg = new Paho.MQTT.Message('$' + c);
+                    msg.destinationName = "puravi/command";
+                    msg.retained = false;
+                    msg.qos = 0;
+                    client.send(msg);
+                    showToast("DISPATCHING: " + (c === 'G' ? 'START' : 'STOP'));
+                }, 300);
+
+            } else {
+                // Q and W commands — send immediately, no lockout needed
+                let msg = new Paho.MQTT.Message('$' + c);
+                msg.destinationName = "puravi/command";
+                msg.retained = false;
+                msg.qos = 0;
+                client.send(msg);
+                if (c !== 'Q') showToast("DISPATCHING: PARAM SET");
+            }
         }
 
         function showToast(msg) {

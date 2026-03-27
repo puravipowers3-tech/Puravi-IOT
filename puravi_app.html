@@ -681,10 +681,10 @@
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
-                    // Force zero display to remove "ESTABLISHING" blur/overlay
                     document.getElementById('v-val').innerText = "0";
                     document.getElementById('a-val').innerText = "0.0";
                     sendCmd('Q'); // Initial Sync
+                    setTimeout(() => sendCmd('Q'), 4000); // Retry after 4s for STM8 boot
                 },
                 onFailure: (err) => {
                     let msg = err.errorMessage || "Unknown Error";

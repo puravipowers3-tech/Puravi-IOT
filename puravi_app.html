@@ -627,6 +627,13 @@
                 </div>
             </div>
 
+            <div class="param-group" style="margin-top:20px; border-color:var(--primary); background:rgba(0,210,255,0.05);">
+                <div class="param-name" style="color:var(--primary); font-size:16px;">☁️ CLOUD SETTINGS</div>
+                <div class="param-desc" style="margin-bottom:12px;">Google Sheets Webhook URL</div>
+                <input type="text" id="webhook-input" placeholder="Paste script URL here..." class="param-input" style="width:100% !important; text-align:left; font-size:12px; margin-bottom:10px;">
+                <button class="set-mini-btn" style="width:100%; height:45px;" onclick="saveWebhook()">SAVE WEBHOOK</button>
+            </div>
+
             <div class="param-group" style="margin-top:20px;">
                 <div class="param-name">⚡ CUMULATIVE ENERGY</div>
                 <div class="param-row" style="align-items:center;">
@@ -652,7 +659,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.0 (PROVISIONING+)";
+        const APP_VERSION = "2.4.1 (STABILITY+)";
 
         function saveWiFi() {
             const ssid = document.getElementById('wifi-ssid').value;

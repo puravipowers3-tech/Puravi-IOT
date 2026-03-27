@@ -585,11 +585,11 @@
             </div>
 
             <div class="controls">
-                <button class="btn btn-start" onclick="sendCmd('G')">
+                <button class="btn btn-start btn-action" onclick="sendCmd('G')">
                     <span class="btn-icon">⚡</span>
                     <span>START</span>
                 </button>
-                <button class="btn btn-stop" onclick="sendCmd('S')">
+                <button class="btn btn-stop btn-action" onclick="sendCmd('S')">
                     <span class="btn-icon">✕</span>
                     <span>STOP</span>
                 </button>
@@ -787,7 +787,7 @@
             }
 
             // Bulk Sync Handler: $S,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13*
-            if (raw.startsWith('$S')) {
+            if (raw.startsWith('$S,')) {
                 let match = raw.match(/\$S,([0-9,.-]+)\*/);
                 if (!match) return;
                 let values = match[1].split(',').map(Number);

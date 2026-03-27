@@ -385,61 +385,129 @@
             font-size: 20px;
         }
 
-        .param-group {
-            background: var(--glass);
-            border-radius: 25px;
-            padding: 10px;
-            margin-bottom: 25px;
-            border: 1px solid var(--glass-border);
+        /* Premium Config Groups */
+        .config-group {
+            margin-bottom: 35px;
+            text-align: left;
         }
 
-        .param-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-        }
-
-        .param-row:last-child { border-bottom: none; }
-
-        .param-info { text-align: left; }
-        .param-name { font-size: 13px; font-weight: 600; color: #fff; }
-        .param-desc { font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-top: 2px; }
-
-        .param-ctrl {
+        .config-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 12px;
+            opacity: 0.9;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
-        .param-ctrl input {
-            width: 70px;
-            background: #000;
-            border: 1px solid var(--primary);
+        .param-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 24px;
+            padding: 15px 18px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .param-card:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.12);
+            transform: translateX(8px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .param-icon-box {
+            width: 48px;
+            height: 48px;
+            background: rgba(0,210,255,0.1);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 15px;
+            box-shadow: inset 0 0 15px rgba(0,210,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .param-main {
+            flex: 1;
+            text-align: left;
+        }
+
+        /* Styled Select */
+        .p-select {
+            background: #111;
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 8px 12px;
             border-radius: 12px;
-            padding: 10px;
-            color: var(--primary);
+            font-weight: 600;
+            outline: none;
+            font-family: inherit;
+        }
+
+        /* Premium Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px; width: 20px;
+            left: 4px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        .num-input-wrap {
+            display: flex;
+            align-items: center;
+            background: #000;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 5px 10px;
+            gap: 8px;
+        }
+
+        .num-input {
+            width: 50px;
+            background: transparent;
+            border: none;
+            color: #fff;
             text-align: center;
             font-weight: 700;
-            font-family: 'Outfit', sans-serif;
             outline: none;
         }
-
-        .set-mini-btn {
-            background: rgba(0, 210, 255, 0.1);
-            color: var(--primary);
-            border: 1px solid rgba(0, 210, 255, 0.2);
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .param-input.on { border-color: var(--success) !important; color: var(--success) !important; box-shadow: 0 0 15px rgba(0,255,136,0.1); }
-        .param-input.off { border-color: var(--danger) !important; color: var(--danger) !important; box-shadow: 0 0 15px rgba(255,77,77,0.1); }
-        
-        select.param-input option { background: #111; color: #fff; }
 
         /* Tank Visualization */
         .tanks-row {
@@ -669,7 +737,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.3 (TACTILE+)";
+        const APP_VERSION = "2.4.4 (PREMIUM+)";
 
         let lastState = 0;
         let sessionSeconds = 0;
@@ -758,55 +826,59 @@
         }
 
         const PARAMS = [
-            { name: "Operation Mode", type: "select", options: ["Manual", "Auto"], max: 1 },
-            { name: "Pump ON Time", type: "time", max: 1440 },
-            { name: "Pump OFF Time", type: "time", max: 1440 },
-            { name: "Dryrun Retry Time", type: "time", max: 1440 },
-            { name: "Upper Tank Float", type: "select", options: ["Disable", "Enable"], max: 1 },
-            { name: "Lower Tank Float", type: "select", options: ["Disable", "Enable"], max: 1 },
-            { name: "Power up Auto Start", type: "select", options: ["Disable", "Enable"], max: 1 },
-            { name: "Buzzer Indication", type: "select", options: ["Disable", "Enable"], max: 1 },
-            { name: "Dual Tank Mode", type: "select", options: ["Single", "Dual"], max: 1 },
-            { name: "Overload Current", type: "number", unit: "A", step: 0.1, max: 800 },
-            { name: "Dryrun Current", type: "number", unit: "A", step: 0.1, max: 800 },
-            { name: "Low Voltage Setting", type: "number", unit: "V", max: 500 },
-            { name: "High Voltage Setting", type: "number", unit: "V", max: 500 }
+            { id: 1, name: "Operation Mode", type: "select", options: ["Manual", "Auto"], group: "⚙️ Operation Settings", icon: "⚙️" },
+            { id: 2, name: "Pump ON Time", type: "time", group: "🕒 Timing Settings", icon: "🕒", label: "min" },
+            { id: 3, name: "Pump OFF Time", type: "time", group: "🕒 Timing Settings", icon: "⌛", label: "min" },
+            { id: 4, name: "Dryrun Retry Time", type: "time", group: "🕒 Timing Settings", icon: "💧", label: "min" },
+            { id: 5, name: "Upper Tank Float", type: "toggle", group: "🚿 Tank Sensors", icon: "🚿" },
+            { id: 6, name: "Lower Tank Float", type: "toggle", group: "🚰 Tank Sensors", icon: "🚰" },
+            { id: 7, name: "Power up Auto Start", type: "toggle", group: "⚙️ Operation Settings", icon: "⚡" },
+            { id: 8, name: "Buzzer Indication", type: "toggle", group: "⚙️ Operation Settings", icon: "🔔" },
+            { id: 9, name: "Dual Tank Mode", type: "select", options: ["Single", "Dual"], group: "🚿 Tank Sensors", icon: "🌊" },
+            { id: 10, name: "Overload Current", type: "number", step: 0.1, group: "🛡️ Protection Setup", icon: "🛡️", label: "A" },
+            { id: 11, name: "Dryrun Current", type: "number", step: 0.1, group: "🛡️ Protection Setup", icon: "🛡️", label: "A" },
+            { id: 12, name: "Low Voltage Setting", type: "number", group: "🛡️ Protection Setup", icon: "🛡️", label: "V" },
+            { id: 13, name: "High Voltage Setting", type: "number", group: "🛡️ Protection Setup", icon: "🛡️", label: "V" }
         ];
 
         function initParams() {
-            let html = "";
-            PARAMS.forEach((p, i) => {
-                const id = i + 1;
-                let inputHtml = "";
-                if (p.type === "select") {
-                    inputHtml = `<select id="p-${id}" class="param-input" onchange="updateColors(this)">`;
-                    p.options.forEach((opt, idx) => { inputHtml += `<option value="${idx}">${opt}</option>`; });
-                    inputHtml += `</select>`;
-                } else if (p.type === "time") {
-                    inputHtml = `<input type="time" id="p-${id}" class="param-input">`;
-                } else {
-                    inputHtml = `<input type="number" id="p-${id}" step="${p.step||1}" class="param-input">`;
-                }
+            let container = document.getElementById('param-list');
+            container.innerHTML = "";
+            
+            const groups = ["⚙️ Operation Settings", "🕒 Timing Settings", "🚿 Tank Sensors", "🛡️ Protection Setup"];
+            
+            groups.forEach(gName => {
+                let groupHtml = `<div class="config-group"><div class="config-title">${gName}</div>`;
+                
+                PARAMS.filter(p => p.group === gName).forEach(p => {
+                    const id = p.id;
+                    let inputHtml = "";
+                    
+                    if (p.type === "select") {
+                        inputHtml = `<select id="p-${id}" class="p-select" onchange="saveParam(${id})">`;
+                        p.options.forEach((opt, idx) => { inputHtml += `<option value="${idx}">${opt}</option>`; });
+                        inputHtml += `</select>`;
+                    } else if (p.type === "toggle") {
+                        inputHtml = `<label class="switch"><input type="checkbox" id="p-${id}" onchange="saveParam(${id})"><span class="slider"></span></label>`;
+                    } else if (p.type === "time") {
+                        inputHtml = `<div class="num-input-wrap"><input type="time" id="p-${id}" class="num-input" onchange="saveParam(${id})"><span style="font-size:10px; opacity:0.5">${p.label}</span></div>`;
+                    } else {
+                        inputHtml = `<div class="num-input-wrap"><input type="number" id="p-${id}" step="${p.step||1}" class="num-input" onchange="saveParam(${id})"><span style="font-size:10px; opacity:0.5">${p.label}</span></div>`;
+                    }
 
-                html += `
-                <div class="param-group" id="group-${id}">
-                    <div class="param-row">
-                        <div class="param-info">
-                            <div class="param-name">${p.name}</div>
+                    groupHtml += `
+                    <div class="param-card" id="card-${id}">
+                        <div class="param-icon-box">${p.icon}</div>
+                        <div class="param-main">
+                            <div class="param-name" style="font-size:15px; font-weight:700;">${p.name}</div>
                             <div class="param-desc">Menu Item ${id}</div>
                         </div>
-                        <div class="param-ctrl">
-                            ${inputHtml}
-                            <button class="set-mini-btn" onclick="saveParam(${id})">SET</button>
-                        </div>
-                    </div>
-                </div>`;
+                        <div class="param-ctrl">${inputHtml}</div>
+                    </div>`;
+                });
+                groupHtml += `</div>`;
+                container.innerHTML += groupHtml;
             });
-            document.getElementById('param-list').innerHTML = html;
-            // Apply initial colors
-            setTimeout(() => {
-                document.querySelectorAll('select.param-input').forEach(updateColors);
-            }, 100);
         }
 
         function mcuToTime(val) {
@@ -858,13 +930,14 @@
                 let values = match[1].split(',').map(Number);
                 values.forEach((v, i) => {
                     const id = i + 1;
-                    if (id > PARAMS.length) return;
+                    let p = PARAMS.find(x => x.id === id);
+                    if (!p) return;
                     let el = document.getElementById('p-' + id);
                     if (el && document.activeElement !== el) {
-                        if (PARAMS[i].type === "time") el.value = mcuToTime(v);
+                        if (p.type === "time") el.value = mcuToTime(v);
+                        else if (p.type === "toggle") el.checked = (v == 1);
                         else if (id == 10 || id == 11) el.value = (v / 10).toFixed(1);
                         else el.value = v;
-                        updateColors(el);
                     }
                 });
                 return;
@@ -877,19 +950,20 @@
                 let id = parseInt(match[1]);
                 let val = parseFloat(match[2]);
 
-                if (id < 1 || id > PARAMS.length) return;
+                let p = PARAMS.find(x => x.id === id);
+                if (!p) return;
                 let el = document.getElementById('p-' + id);
                 if (el && document.activeElement !== el) {
-                    if (PARAMS[id-1].type === "time") el.value = mcuToTime(val);
+                    if (p.type === "time") el.value = mcuToTime(val);
+                    else if (p.type === "toggle") el.checked = (val == 1);
                     else if (id == 10 || id == 11) el.value = (val / 10).toFixed(1);
                     else el.value = val;
-                    updateColors(el);
                 }
                 
-                let group = document.getElementById('group-' + id);
-                if (group) {
-                    group.style.borderColor = "var(--success)";
-                    setTimeout(() => group.style.borderColor = "var(--glass-border)", 800);
+                let card = document.getElementById('card-' + id);
+                if (card) {
+                    card.style.borderColor = "var(--success)";
+                    setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
                 }
                 return;
             }
@@ -1079,27 +1153,27 @@
         }
 
         function saveParam(id) {
+            let p = PARAMS.find(x => x.id === id);
             let el = document.getElementById('p-' + id);
-            let val = el.value;
+            let val;
             
-            // Validation: Use strict check — val=0 (Disable) must NOT be rejected!
-            if (val.toString().trim() === "" || (PARAMS[id-1].type === "time" && val === undefined)) {
-                alert("Please select a valid value!");
-                return;
-            }
+            if (p.type === "toggle") val = el.checked ? 1 : 0;
+            else val = el.value;
+            
+            // Validation
+            if (val === "" || (p.type === "time" && !val)) return;
 
-            if (PARAMS[id-1].type === "time") val = timeToMcu(val);
+            if (p.type === "time") val = timeToMcu(val);
             else if (id == 10 || id == 11) val = Math.round(val * 10);
             
-            // Format: W <2-digit ID> <4-digit Value>
             let cmd = "W" + id.toString().padStart(2, '0') + val.toString().padStart(4, '0');
             sendCmd(cmd);
             
-            // Feedback
-            let btn = el.nextElementSibling;
-            if(btn) {
-                btn.innerText = "DONE";
-                setTimeout(() => btn.innerText = "SET", 1000);
+            // Visual Feedback
+            let card = document.getElementById('card-' + id);
+            if(card) {
+                card.style.borderColor = "var(--success)";
+                setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
             }
         }
 

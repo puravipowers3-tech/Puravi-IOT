@@ -251,53 +251,64 @@
             margin-top: 4px;
         }
 
-        /* Controls Section */
+        /* Industrial 3D Push-Buttons */
         .controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
+            margin-top: 15px;
         }
 
         .btn {
             border: none;
-            border-radius: 28px;
+            border-radius: 20px;
             padding: 24px;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             cursor: pointer;
-            transition: 0.3s;
+            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
-            overflow: hidden;
             color: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 8px;
+            box-shadow: 
+                0 8px 0 rgba(0,0,0,0.3), 
+                0 15px 25px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .btn-start {
-            background: linear-gradient(135deg, #00ff8822, #00ff8844);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-            color: var(--success);
-            box-shadow: 0 15px 35px rgba(0, 255, 136, 0.1);
+            background: linear-gradient(145deg, #00ff88, #00b35f);
+            border-top: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 0 #008f4c, 0 12px 25px rgba(0, 255, 136, 0.2);
+            color: #05331e;
         }
-
-        .btn-start:active { transform: scale(0.95); background: var(--success); color: #000; }
 
         .btn-stop {
-            background: linear-gradient(135deg, #ff336622, #ff336644);
-            border: 1px solid rgba(255, 51, 102, 0.3);
-            color: var(--danger);
-            box-shadow: 0 15px 35px rgba(255, 51, 102, 0.1);
+            background: linear-gradient(145deg, #ff4d4d, #b30000);
+            border-top: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 0 #7a0000, 0 12px 25px rgba(255, 77, 77, 0.2);
+            color: #fff;
         }
 
-        .btn-stop:active { transform: scale(0.95); background: var(--danger); color: #fff; }
-
-        .btn-icon {
-            font-size: 20px;
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 5px 10px rgba(0,0,0,0.2);
         }
+
+        .btn-disabled {
+            filter: grayscale(1) !important;
+            opacity: 0.5 !important;
+            transform: translateY(8px) !important;
+            box-shadow: none !important;
+            pointer-events: none !important;
+        }
+
+        .btn-icon { font-size: 24px; }
 
         /* Navigation Bar */
         .nav-bar {
@@ -540,7 +551,6 @@
                     MOTOR STANDBY
                 </div>
 
-                <h1 class="neon-text">PURAVI POWERS</h1>
         <div id="fault-lbl">SYSTEM HEALTHY</div>
         
         <div class="gauges-container">
@@ -659,7 +669,11 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.1 (STABILITY+)";
+        const APP_VERSION = "2.4.3 (TACTILE+)";
+
+        let lastState = 0;
+        let sessionSeconds = 0;
+        let sessionBaseTime = 0;
 
         function saveWiFi() {
             const ssid = document.getElementById('wifi-ssid').value;
@@ -929,11 +943,22 @@
             if (s === 1) cumulativeKWh += (v * (a / 10) * deltaHours) / 1000;
             lastTimestamp = now;
 
-            // FIX: Robust Time Duration Format (Seconds to H:MM)
-            const safeRt = isNaN(rt) || rt > 864000 ? 0 : rt; // Cap at 10 days
-            let hours = Math.floor(safeRt / 3600);
-            let mins = Math.floor((safeRt % 3600) / 60);
-            document.getElementById('rt-val').innerText = `${hours}:${mins.toString().padStart(2, '0')}`;
+            // SESSION STOPWATCH LOGIC
+            if (s === 1 && lastState !== 1) {
+                // Motor just started: Reset session
+                sessionBaseTime = Date.now();
+                sessionSeconds = 0;
+            }
+            if (s === 1) {
+                // Motor is running: Calculate live duration
+                sessionSeconds = Math.floor((Date.now() - sessionBaseTime) / 1000);
+            }
+            lastState = s;
+
+            // Display Duration (MM:SS)
+            let mins = Math.floor(sessionSeconds / 60);
+            let secs = sessionSeconds % 60;
+            document.getElementById('rt-val').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             document.getElementById('rt-gauge').style.strokeDashoffset = 283 - (Math.min(mins, 60) / 60) * 283;
             
             const states = ["MOTOR STANDBY", "MOTOR RUNNING", "POWER DELAY", "DRY RETRY"];
@@ -993,17 +1018,11 @@
                     cmdLockout = true;
                     setTimeout(() => cmdLockout = false, 10000);
 
-                    // Disable buttons
+                    // Disable buttons (3D Push Logic)
                     const btns = document.querySelectorAll('.btn-action');
-                    btns.forEach(b => {
-                        b.style.opacity = "0.5";
-                        b.style.pointerEvents = "none";
-                    });
+                    btns.forEach(b => b.classList.add('btn-disabled'));
                     setTimeout(() => {
-                        btns.forEach(b => {
-                            b.style.opacity = "1";
-                            b.style.pointerEvents = "auto";
-                        });
+                        btns.forEach(b => b.classList.remove('btn-disabled'));
                     }, 10000);
 
                     // Initialize Retry State

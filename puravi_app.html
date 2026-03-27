@@ -509,6 +509,25 @@
             outline: none;
         }
 
+        .premium-input {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 15px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            transition: 0.3s;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .premium-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0,210,255,0.15);
+        }
+
         /* Tank Visualization */
         .tanks-row {
             display: grid;
@@ -685,38 +704,38 @@
                 <!-- Parameters will be injected here -->
             </div>
             
-            <div class="param-group" style="margin-top:20px; border-color:var(--success); background:rgba(0,255,140,0.05);">
-                <div class="param-name" style="color:var(--success); font-size:16px;">📶 WIFI CONFIGURATION</div>
-                <div class="param-desc" style="margin-bottom:12px;">Update Motor Network Credentials</div>
-                
-                <div style="margin-bottom:15px;">
-                    <div style="font-size:10px; opacity:0.5; margin-bottom:4px;">NETWORK NAME (SSID)</div>
-                    <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="param-input" style="width:100% !important; text-align:left;">
-                </div>
-                
-                <div style="margin-bottom:20px;">
-                    <div style="font-size:10px; opacity:0.5; margin-bottom:4px;">PASSWORD</div>
-                    <input type="password" id="wifi-pass" placeholder="••••••••" class="param-input" style="width:100% !important; text-align:left;">
-                </div>
-                
-                <div style="display:flex; gap:10px;">
-                    <button class="set-mini-btn" style="flex:2; height:45px;" onclick="saveWiFi()">SAVE WIFI</button>
-                    <button class="set-mini-btn" style="flex:1; height:45px; background:rgba(255,165,0,0.1); color:orange; border-color:rgba(255,165,0,0.2);" onclick="restartDevice()">RESTART</button>
+            <div class="config-group" style="margin-top:20px;">
+                <div class="config-title" style="color:var(--success)">📶 WIFI CONFIGURATION</div>
+                <div class="param-card" style="flex-direction:column; align-items:stretch; gap:20px;">
+                    <div>
+                        <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Network Name (SSID)</div>
+                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input">
+                    </div>
+                    <div>
+                        <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Password</div>
+                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input">
+                    </div>
+                    <div style="display:flex; gap:15px; margin-top:10px;">
+                        <button class="btn btn-start" style="flex:2; padding:15px; font-size:12px; height:55px;" onclick="saveWiFi()">SAVE WIFI</button>
+                        <button class="btn btn-stop" style="flex:1.2; padding:15px; font-size:12px; height:55px; background:linear-gradient(145deg, #ff9900, #cc7a00); box-shadow:0 8px 0 #995c00;" onclick="restartDevice()">RESTART</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="param-group" style="margin-top:20px; border-color:var(--primary); background:rgba(0,210,255,0.05);">
-                <div class="param-name" style="color:var(--primary); font-size:16px;">☁️ CLOUD SETTINGS</div>
-                <div class="param-desc" style="margin-bottom:12px;">Google Sheets Webhook URL</div>
-                <input type="text" id="webhook-input" placeholder="Paste script URL here..." class="param-input" style="width:100% !important; text-align:left; font-size:12px; margin-bottom:10px;">
-                <button class="set-mini-btn" style="width:100%; height:45px;" onclick="saveWebhook()">SAVE WEBHOOK</button>
+            <div class="config-group">
+                <div class="config-title">☁️ CLOUD SETTINGS</div>
+                <div class="param-card" style="flex-direction:column; align-items:stretch; gap:15px;">
+                    <div style="font-size:10px; opacity:0.5; text-transform:uppercase; letter-spacing:1px;">Google Sheets Webhook URL</div>
+                    <input type="text" id="webhook-input" placeholder="Paste script URL here..." class="premium-input" style="font-size:11px;">
+                    <button class="btn btn-start" style="width:100%; padding:15px; font-size:12px; height:55px;" onclick="saveWebhook()">SAVE WEBHOOK</button>
+                </div>
             </div>
 
-            <div class="param-group" style="margin-top:20px;">
-                <div class="param-name">⚡ CUMULATIVE ENERGY</div>
-                <div class="param-row" style="align-items:center;">
+            <div class="config-group">
+                <div class="config-title" style="color:var(--primary)">⚡ CUMULATIVE ENERGY</div>
+                <div class="param-card">
                     <div id="kwh-disp" style="font-size:32px; font-weight:800; color:var(--success);">0.0000 <span style="font-size:14px; opacity:0.6;">kWh</span></div>
-                    <button class="set-mini-btn" style="background:rgba(255,0,0,0.1); color:#ff4d4d; border-color:rgba(255,0,0,0.2); margin-left:auto;" onclick="resetEnergy()">RESET</button>
+                    <button class="btn btn-stop" style="padding:10px 20px; font-size:11px; height:45px; width:auto; flex:none;" onclick="resetEnergy()">RESET</button>
                 </div>
             </div>
             
@@ -737,7 +756,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.4 (PREMIUM+)";
+        const APP_VERSION = "2.4.5 (FIX+)";
 
         let lastState = 0;
         let sessionSeconds = 0;
@@ -831,7 +850,7 @@
             { id: 3, name: "Pump OFF Time", type: "time", group: "🕒 Timing Settings", icon: "⌛", label: "min" },
             { id: 4, name: "Dryrun Retry Time", type: "time", group: "🕒 Timing Settings", icon: "💧", label: "min" },
             { id: 5, name: "Upper Tank Float", type: "toggle", group: "🚿 Tank Sensors", icon: "🚿" },
-            { id: 6, name: "Lower Tank Float", type: "toggle", group: "🚰 Tank Sensors", icon: "🚰" },
+            { id: 6, name: "Lower Tank Float", type: "toggle", group: "🚿 Tank Sensors", icon: "🚰" },
             { id: 7, name: "Power up Auto Start", type: "toggle", group: "⚙️ Operation Settings", icon: "⚡" },
             { id: 8, name: "Buzzer Indication", type: "toggle", group: "⚙️ Operation Settings", icon: "🔔" },
             { id: 9, name: "Dual Tank Mode", type: "select", options: ["Single", "Dual"], group: "🚿 Tank Sensors", icon: "🌊" },

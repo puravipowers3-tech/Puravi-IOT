@@ -965,14 +965,12 @@
         function logToCloud(v, a, kwh) {
             const WEBHOOK_URL = localStorage.getItem('webhook_url');
             if (!WEBHOOK_URL) return;
-            const states = ["Standby", "Running", "Power Delay", "Dry Retry"];
-            const currentStatus = states[document.getElementById('m-status').innerText.includes('RUNNING') ? 1 : 0]; // Simplified
             const data = { 
                 time: new Date().toLocaleString(), 
-                volts: v, 
-                amps: a, 
-                energy: kwh.toFixed(4),
-                power: (v * a).toFixed(1),
+                volts: Number(v), 
+                amps: Number(a), 
+                energy: Number(kwh.toFixed(4)),
+                power: Number((v * a).toFixed(1)),
                 status: document.getElementById('m-status').innerText 
             };
             fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) }).catch(() => {});

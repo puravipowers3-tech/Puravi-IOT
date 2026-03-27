@@ -639,7 +639,11 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.3.0 (STABILITY+)";
+        const APP_VERSION = "2.3.1 (RELIABILITY+)";
+
+        let pendingCmd = null;
+        let retryTimer = null;
+        let retryCount = 0;
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -781,8 +785,16 @@
                 return;
             }
             if (raw.includes("[ACK]")) {
-                let cmd = raw.replace('[ACK] ', '').replace('*', '');
+                let cmd = raw.replace('[ACK] $', '').replace('*', ''); // Strip prefix to match 'G' or 'S'
                 showToast("HARDWARE: " + cmd + " ACK");
+                
+                // Clear retry logic if this ACK matches our pending command
+                if (pendingCmd === cmd) {
+                    clearTimeout(retryTimer);
+                    pendingCmd = null;
+                    retryTimer = null;
+                    retryCount = 0;
+                }
                 return;
             }
 
@@ -929,32 +941,40 @@
 
         let cmdLockout = false;
 
-        function sendCmd(c) {
+        function sendCmd(c, isRetry = false) {
             if (!client || !client.isConnected()) {
                 updateStatus(false, "OFFLINE: DISPATCH FAILED");
                 return;
             }
 
             if (c === 'G' || c === 'S') {
-                if (cmdLockout) {
-                    showToast("PROTECTING MOTOR: PLEASE WAIT...");
-                    return;
-                }
-                cmdLockout = true;
-                setTimeout(() => cmdLockout = false, 10000);
+                if (!isRetry) {
+                    if (cmdLockout) {
+                        showToast("PROTECTING MOTOR: PLEASE WAIT...");
+                        return;
+                    }
+                    cmdLockout = true;
+                    setTimeout(() => cmdLockout = false, 10000);
 
-                // Disable buttons to match lockout time
-                const btns = document.querySelectorAll('.btn-action');
-                btns.forEach(b => {
-                    b.style.opacity = "0.5";
-                    b.style.pointerEvents = "none";
-                });
-                setTimeout(() => {
+                    // Disable buttons
+                    const btns = document.querySelectorAll('.btn-action');
                     btns.forEach(b => {
-                        b.style.opacity = "1";
-                        b.style.pointerEvents = "auto";
+                        b.style.opacity = "0.5";
+                        b.style.pointerEvents = "none";
                     });
-                }, 10000);
+                    setTimeout(() => {
+                        btns.forEach(b => {
+                            b.style.opacity = "1";
+                            b.style.pointerEvents = "auto";
+                        });
+                    }, 10000);
+
+                    // Initialize Retry State
+                    pendingCmd = c;
+                    retryCount = 0;
+                    if (retryTimer) clearTimeout(retryTimer);
+                    retryTimer = setTimeout(() => handleRetry(), 1500);
+                }
 
                 // Clear retained ONLY for motor commands
                 let clearMsg = new Paho.MQTT.Message('');
@@ -969,7 +989,7 @@
                     msg.retained = false;
                     msg.qos = 0;
                     client.send(msg);
-                    showToast("DISPATCHING: " + (c === 'G' ? 'START' : 'STOP'));
+                    showToast((isRetry ? "RETRYING: " : "DISPATCHING: ") + (c === 'G' ? 'START' : 'STOP'));
                 }, 300);
 
             } else {
@@ -980,6 +1000,19 @@
                 msg.qos = 0;
                 client.send(msg);
                 if (c !== 'Q') showToast("DISPATCHING: PARAM SET");
+            }
+        }
+
+        function handleRetry() {
+            if (!pendingCmd) return;
+            if (retryCount < 2) { // 2 retries = 3 attempts total
+                retryCount++;
+                sendCmd(pendingCmd, true);
+                retryTimer = setTimeout(() => handleRetry(), 2000);
+            } else {
+                showToast("HARDWARE UNRESPONSIVE (TIMEOUT)");
+                pendingCmd = null;
+                retryTimer = null;
             }
         }
 

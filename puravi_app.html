@@ -777,7 +777,7 @@
                 return;
             }
             if (raw.includes("STALE START IGNORED")) {
-                showToast("SYNCING: READY IN 1s");
+                showToast("SYNCING: READY IN 2s");
                 return;
             }
 
@@ -940,7 +940,7 @@
                         b.style.opacity = "1";
                         b.style.pointerEvents = "auto";
                     });
-                }, 3000);
+                }, 1000); // 1s lock for snabbiness
             }
 
             // Add '$' prefix for STM8 protocol

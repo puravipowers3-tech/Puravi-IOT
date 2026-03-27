@@ -639,7 +639,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.2.2";
+        const APP_VERSION = "2.3.0 (STABILITY+)";
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -778,6 +778,11 @@
             }
             if (raw.includes("STALE START IGNORED")) {
                 showToast("SYNCING: READY IN 2s");
+                return;
+            }
+            if (raw.includes("[ACK]")) {
+                let cmd = raw.replace('[ACK] ', '').replace('*', '');
+                showToast("HARDWARE: " + cmd + " ACK");
                 return;
             }
 

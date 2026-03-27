@@ -493,6 +493,16 @@
         }
 
         .fault-toast.active { transform: translateY(0); }
+        #fault-lbl {
+            text-align: center;
+            font-weight: 600;
+            color: #ff4d4d;
+            height: 20px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 77, 77, 0.4);
+            letter-spacing: 1px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -530,7 +540,10 @@
                     MOTOR STANDBY
                 </div>
 
-                <div class="stats-grid">
+                <h1 class="neon-text">PURAVI POWERS</h1>
+        <div id="fault-lbl">SYSTEM HEALTHY</div>
+        
+        <div class="gauges-container">
                     <div class="gauge-container" style="width:120px; height:120px;" id="a-card">
                         <svg class="gauge-svg" viewBox="0 0 100 100">
                             <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
@@ -821,6 +834,12 @@
             const [v, a, s, rt, f, st] = data;
             if (isNaN(v) || v > 550) return; 
 
+            // Fault Mapping
+            const faults = ["SYSTEM HEALTHY", "FAULT: HIGH VOLTAGE", "FAULT: LOW VOLTAGE", "FAULT: OVERLOAD", "FAULT: DRY RUN", "FAULT: UT FULL", "FAULT: LT EMPTY"];
+            const faultLbl = document.getElementById('fault-lbl');
+            faultLbl.innerText = faults[f] || "SYSTEM HEALTHY";
+            faultLbl.style.color = f > 0 ? "#ff4d4d" : "#00f2fe";
+
             document.getElementById('v-val').innerText = v;
             document.getElementById('a-val').innerText = (a / 10).toFixed(1);
             
@@ -908,14 +927,28 @@
                 updateStatus(false, "OFFLINE: DISPATCH FAILED");
                 return;
             }
+
+            // Button Debounce & Visual Feedback
+            if (c === 'G' || c === 'S') {
+                const btns = document.querySelectorAll('.btn-action');
+                btns.forEach(b => {
+                    b.style.opacity = "0.5";
+                    b.style.pointerEvents = "none";
+                });
+                setTimeout(() => {
+                    btns.forEach(b => {
+                        b.style.opacity = "1";
+                        b.style.pointerEvents = "auto";
+                    });
+                }, 3000);
+            }
+
             // Add '$' prefix for STM8 protocol
             let msg = new Paho.MQTT.Message('$' + c);
             msg.destinationName = "puravi/command";
             msg.retained = false; // CRITICAL: Prevent HiveMQ from replaying on reconnect!
             msg.qos = 0;         // Fire-and-forget — no re-delivery of stale commands
             
-            // Single precise send — STM8 'G' command sets state directly (NOT a toggle)
-            // Sending multiple times causes rapid timer resets and motor flicker
             client.send(msg);
             
             // Visual feedback for commands

@@ -781,7 +781,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.6 (DURATION+)";
+        const APP_VERSION = "2.4.7 (RAPID+)";
 
         let lastState = 0;
         let sessionSeconds = 0;
@@ -1146,14 +1146,14 @@
                         return;
                     }
                     cmdLockout = true;
-                    setTimeout(() => cmdLockout = false, 10000);
+                    setTimeout(() => cmdLockout = false, 500);
 
-                    // Disable buttons (3D Push Logic)
+                    // Disable buttons (3D Push Logic) - Now only 500ms for "Rapid" feel
                     const btns = document.querySelectorAll('.btn-action');
                     btns.forEach(b => b.classList.add('btn-disabled'));
                     setTimeout(() => {
                         btns.forEach(b => b.classList.remove('btn-disabled'));
-                    }, 10000);
+                    }, 500);
 
                     // Initialize Retry State
                     pendingCmd = c;

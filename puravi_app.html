@@ -731,14 +731,14 @@
             
             <div class="config-group" style="margin-top:20px;">
                 <div class="config-title" style="color:var(--success)">📶 WIFI CONFIGURATION</div>
-                <div class="param-card" style="flex-direction:column; align-items:stretch; gap:20px;">
+                <div id="wifi-card" class="param-card" style="flex-direction:column; align-items:stretch; gap:20px;">
                     <div>
                         <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Network Name (SSID)</div>
-                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input">
+                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input" onchange="saveWiFi()">
                     </div>
                     <div>
                         <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Password</div>
-                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input">
+                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input" onchange="saveWiFi()">
                     </div>
                     <div style="display:flex; gap:15px; margin-top:10px;">
                         <button class="btn btn-start" style="flex:2; padding:15px; font-size:12px; height:55px;" onclick="saveWiFi()">SAVE WIFI</button>
@@ -781,7 +781,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.7 (RAPID+)";
+        const APP_VERSION = "2.4.8 (AUTO-WIFI+)";
 
         let lastState = 0;
         let sessionSeconds = 0;
@@ -790,14 +790,26 @@
         function saveWiFi() {
             const ssid = document.getElementById('wifi-ssid').value;
             const pass = document.getElementById('wifi-pass').value;
-            if (!ssid) {
-                showToast("SSID CANNOT BE EMPTY");
-                return;
+            
+            if (activeElement === document.getElementById('wifi-ssid')) {
+                if (ssid) sendCmd('N' + ssid);
+            } else if (activeElement === document.getElementById('wifi-pass')) {
+                sendCmd('K' + pass);
+            } else {
+                // Manual button click or fallback
+                if (ssid) sendCmd('N' + ssid);
+                setTimeout(() => sendCmd('K' + pass), 500);
             }
-            sendCmd('N' + ssid);
-            setTimeout(() => sendCmd('K' + pass), 500);
-            showToast("WIFI SETTINGS DISPATCHED");
+            
+            let card = document.getElementById('wifi-card');
+            if (card) {
+                card.style.borderColor = "var(--success)";
+                setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
+            }
         }
+
+        let activeElement = null;
+        window.addEventListener('focusin', (e) => activeElement = e.target);
 
         function restartDevice() {
             if (confirm("RESTART MOTOR CONTROLLER?\nConnection will drop for 30s.")) {

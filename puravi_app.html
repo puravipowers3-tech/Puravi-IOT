@@ -203,7 +203,7 @@
             stroke: var(--primary);
             stroke-width: 8;
             stroke-linecap: round;
-            transition: stroke-dashoffset 0.8s cubic-bezier(0.1, 0.7, 1.0, 0.1), stroke 0.4s ease;
+            transition: stroke-dashoffset 0.2s cubic-bezier(0.1, 0.7, 1.0, 0.1), stroke 0.4s ease;
         }
 
         .gauge-pulse {
@@ -734,11 +734,11 @@
                 <div id="wifi-card" class="param-card" style="flex-direction:column; align-items:stretch; gap:20px;">
                     <div>
                         <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Network Name (SSID)</div>
-                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input" onchange="saveWiFi()">
+                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input" oninput="saveWiFi()">
                     </div>
                     <div>
                         <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Password</div>
-                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input" onchange="saveWiFi()">
+                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input" oninput="saveWiFi()">
                     </div>
                     <div style="display:flex; gap:15px; margin-top:10px;">
                         <button class="btn btn-start" style="flex:2; padding:15px; font-size:12px; height:55px;" onclick="saveWiFi()">SAVE WIFI</button>
@@ -781,31 +781,35 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.8 (AUTO-WIFI+)";
+        const APP_VERSION = "2.4.9 (INSTANT+)";
 
         let lastState = 0;
         let sessionSeconds = 0;
         let sessionBaseTime = 0;
 
+        let wifiTimer;
         function saveWiFi() {
-            const ssid = document.getElementById('wifi-ssid').value;
-            const pass = document.getElementById('wifi-pass').value;
+            if (wifiTimer) clearTimeout(wifiTimer);
             
-            if (activeElement === document.getElementById('wifi-ssid')) {
-                if (ssid) sendCmd('N' + ssid);
-            } else if (activeElement === document.getElementById('wifi-pass')) {
-                sendCmd('K' + pass);
-            } else {
-                // Manual button click or fallback
-                if (ssid) sendCmd('N' + ssid);
-                setTimeout(() => sendCmd('K' + pass), 500);
-            }
-            
-            let card = document.getElementById('wifi-card');
-            if (card) {
-                card.style.borderColor = "var(--success)";
-                setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
-            }
+            wifiTimer = setTimeout(() => {
+                const ssid = document.getElementById('wifi-ssid').value;
+                const pass = document.getElementById('wifi-pass').value;
+                
+                if (activeElement === document.getElementById('wifi-ssid')) {
+                    if (ssid) sendCmd('N' + ssid);
+                } else if (activeElement === document.getElementById('wifi-pass')) {
+                    sendCmd('K' + pass);
+                } else {
+                    if (ssid) sendCmd('N' + ssid);
+                    setTimeout(() => sendCmd('K' + pass), 500);
+                }
+                
+                let card = document.getElementById('wifi-card');
+                if (card) {
+                    card.style.borderColor = "var(--success)";
+                    setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
+                }
+            }, 1000); // 1s debounce
         }
 
         let activeElement = null;

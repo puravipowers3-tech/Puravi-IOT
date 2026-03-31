@@ -781,7 +781,8 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.4.9 (INSTANT+)";
+        const APP_VERSION = "2.5.0 (ULTRA-FAST)";
+        const CAL = { v: 1.0, a: 1.0 }; // Global Software Calibration (1.0 = raw)
 
         let lastState = 0;
         let sessionSeconds = 0;
@@ -794,6 +795,8 @@
             wifiTimer = setTimeout(() => {
                 const ssid = document.getElementById('wifi-ssid').value;
                 const pass = document.getElementById('wifi-pass').value;
+                
+                showToast("SYNCING NETWORK CONFIG...");
                 
                 if (activeElement === document.getElementById('wifi-ssid')) {
                     if (ssid) sendCmd('N' + ssid);
@@ -809,7 +812,7 @@
                     card.style.borderColor = "var(--success)";
                     setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
                 }
-            }, 1000); // 1s debounce
+            }, 1000); 
         }
 
         let activeElement = null;
@@ -1047,8 +1050,12 @@
             // flt.c sends: $Volts,Amps,State,RunSec,Fault,Status* = 5 commas = 6 fields
             if (data.length < 6) return;
 
-            const [v, a, s, rt, f, st] = data;
-            if (isNaN(v) || v > 550) return; 
+            const [rawV, rawA, s, rt, f, st] = data;
+            if (isNaN(rawV) || rawV > 550) return; 
+
+            // Software Calibration Layer (v2.5.0)
+            const v = Math.round(Number(rawV) * CAL.v);
+            const a = Math.round(Number(rawA) * CAL.a);
 
             // Fault Mapping
             const faults = ["SYSTEM HEALTHY", "FAULT: HIGH VOLTAGE", "FAULT: LOW VOLTAGE", "FAULT: OVERLOAD", "FAULT: DRY RUN", "FAULT: UT FULL", "FAULT: LT EMPTY"];

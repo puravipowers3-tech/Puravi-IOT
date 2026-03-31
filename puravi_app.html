@@ -781,7 +781,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.5.4 (STABLE)";
+        const APP_VERSION = "2.5.8 (ULTRA)";
         const CAL = { v: 1.0, a: 1.0 }; // Global Software Calibration (1.0 = raw)
 
         let lastState = 0;
@@ -845,9 +845,9 @@
         }
 
         const BROKER = "cadeb3d01f724103a90d8399337dfd15.s1.eu.hivemq.cloud";
+        const USER = "PuraviPowers".trim();
+        const PASS = "Puravipowers@1231".trim();
         const PORT = 8884;
-        const USER = "PuraviPowers";
-        const PASS = "Puravipowers@1231";
         
         let client;
         let cumulativeKWh = 0;
@@ -855,8 +855,8 @@
         let lastLogTime = 0;
 
         function connect() {
-            // Strictly < 23 chars for MQTT 3.1.1 compatibility
-            const clientId = "pu_" + Math.random().toString(16).substr(2, 8);
+            // Strictly alphanumeric, no special chars
+            const clientId = "PuraviApp" + Math.random().toString(36).substr(2, 6);
             client = new Paho.MQTT.Client(BROKER, PORT, clientId);
             client.onConnectionLost = (rsp) => {
                 let reason = rsp.errorMessage || "Network Error";
@@ -865,23 +865,27 @@
             };
             client.onMessageArrived = (msg) => handleData(msg.payloadString);
             client.connect({
-                useSSL: true, userName: USER, password: PASS,
-                timeout: 5,
-                keepAliveInterval: 10,
-                cleanSession: true, // Reliable for HiveMQ browser instances
+                useSSL: true, 
+                userName: USER, 
+                password: PASS,
+                timeout: 10,
+                keepAliveInterval: 20,
+                cleanSession: true, 
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
                     document.getElementById('v-val').innerText = "0";
                     document.getElementById('a-val').innerText = "0.0";
-                    sendCmd('Q'); // Initial Sync
-                    setTimeout(() => sendCmd('Q'), 4000); // Retry after 4s for STM8 boot
+                    sendCmd('Q'); 
+                    console.log("MQTT Online: " + clientId);
                 },
                 onFailure: (err) => {
-                    let msg = err.errorMessage || "Check Internet/Broker";
-                    if (msg.includes("AMQJSC0001E") || msg.includes("return code:5")) 
-                        msg = "AUTH FAILED: Check HiveMQ Username/Pass";
-                    updateStatus(false, "CLOUD ERROR: " + msg);
+                    console.error("MQTT Debug Detail:", err);
+                    let msg = "";
+                    if (err.errorCode === 4) msg = "UNAUTHORIZED: USERNAME WRONG";
+                    else if (err.errorCode === 5) msg = "UNAUTHORIZED: PASSWORD WRONG";
+                    else msg = err.errorMessage || "BAD_CONNECTION";
+                    updateStatus(false, "ERROR: " + msg);
                     setTimeout(connect, 5000); 
                 }
             });

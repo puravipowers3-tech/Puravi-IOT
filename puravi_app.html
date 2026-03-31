@@ -781,7 +781,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.5.0 (ULTRA-FAST)";
+        const APP_VERSION = "2.5.1 (ULTRA-FAST+)";
         const CAL = { v: 1.0, a: 1.0 }; // Global Software Calibration (1.0 = raw)
 
         let lastState = 0;
@@ -860,12 +860,13 @@
             client.onConnectionLost = (rsp) => {
                 let reason = rsp.errorMessage || "Network Error";
                 updateStatus(false, "LINK SEVERED: " + reason);
-                setTimeout(connect, 5000);
+                setTimeout(connect, 3000);
             };
             client.onMessageArrived = (msg) => handleData(msg.payloadString);
             client.connect({
                 useSSL: true, userName: USER, password: PASS,
                 timeout: 10,
+                keepAliveInterval: 15,
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
@@ -1048,7 +1049,7 @@
             if (!tMatch) return;
             let data = tMatch[1].split(',').map(Number);
             // flt.c sends: $Volts,Amps,State,RunSec,Fault,Status* = 5 commas = 6 fields
-            if (data.length < 6) return;
+            if (data.length < 5) return;
 
             const [rawV, rawA, s, rt, f, st] = data;
             if (isNaN(rawV) || rawV > 550) return; 
@@ -1318,6 +1319,12 @@
             initParams(); 
             connect(); 
         };
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && client && client.isConnected()) {
+                sendCmd('Q');
+            }
+        });
     </script>
 </body>
 </html>

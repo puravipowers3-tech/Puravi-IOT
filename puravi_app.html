@@ -781,7 +781,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.5.2 (ULTRA-FAST)";
+        const APP_VERSION = "2.5.4 (STABLE)";
         const CAL = { v: 1.0, a: 1.0 }; // Global Software Calibration (1.0 = raw)
 
         let lastState = 0;
@@ -855,7 +855,7 @@
         let lastLogTime = 0;
 
         function connect() {
-            const clientId = "p_u_" + Math.random().toString(16).substr(2, 4);
+            const clientId = "p_u_" + Date.now() + "_" + Math.random().toString(16).substr(2, 4);
             client = new Paho.MQTT.Client(BROKER, PORT, clientId);
             client.onConnectionLost = (rsp) => {
                 let reason = rsp.errorMessage || "Network Error";
@@ -867,7 +867,7 @@
                 useSSL: true, userName: USER, password: PASS,
                 timeout: 5,
                 keepAliveInterval: 10,
-                cleanSession: false, // Maintain session for instant recovery
+                cleanSession: true, // Reliable for HiveMQ browser instances
                 onSuccess: () => {
                     updateStatus(true, "CONNECTED TO CLOUD");
                     client.subscribe("puravi/telemetry");
@@ -880,7 +880,7 @@
                     let msg = err.errorMessage || "Unknown Error";
                     if (msg.includes("AMQJSC0001E")) msg = "WRONG PASSWORD/USER";
                     updateStatus(false, "CLOUD FAILED: " + msg);
-                    setTimeout(connect, 10000);
+                    setTimeout(connect, 5000); // Wait 5s and try again
                 }
             });
         }
@@ -1323,11 +1323,6 @@
             
             initParams(); 
             connect(); 
-
-            // Aggressive Status Heartbeat (1.5s)
-            setInterval(() => {
-                if (!client || !client.isConnected()) connect();
-            }, 1500);
         };
 
         document.addEventListener('visibilitychange', () => {

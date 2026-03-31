@@ -734,11 +734,11 @@
                 <div id="wifi-card" class="param-card" style="flex-direction:column; align-items:stretch; gap:20px;">
                     <div>
                         <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Network Name (SSID)</div>
-                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input" oninput="saveWiFi()">
+                        <input type="text" id="wifi-ssid" placeholder="Current: Sriram" class="premium-input">
                     </div>
                     <div>
                         <div style="font-size:10px; opacity:0.5; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Password</div>
-                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input" oninput="saveWiFi()">
+                        <input type="password" id="wifi-pass" placeholder="••••••••" class="premium-input">
                     </div>
                     <div style="display:flex; gap:15px; margin-top:10px;">
                         <button class="btn btn-start" style="flex:2; padding:15px; font-size:12px; height:55px;" onclick="saveWiFi()">SAVE WIFI</button>
@@ -788,31 +788,36 @@
         let sessionSeconds = 0;
         let sessionBaseTime = 0;
 
-        let wifiTimer;
         function saveWiFi() {
-            if (wifiTimer) clearTimeout(wifiTimer);
+            const ssid = document.getElementById('wifi-ssid').value;
+            const pass = document.getElementById('wifi-pass').value;
+            const btn = event?.target || document.querySelector('.btn-start');
             
-            wifiTimer = setTimeout(() => {
-                const ssid = document.getElementById('wifi-ssid').value;
-                const pass = document.getElementById('wifi-pass').value;
+            if (!ssid) {
+                alert("Please enter a WiFi Name (SSID)");
+                return;
+            }
+
+            const originalText = btn.innerText;
+            btn.innerText = "SAVING...";
+            btn.style.background = "var(--warning)";
+            
+            showToast("PROVISIONING: " + ssid);
+            
+            // Send SSID first
+            sendCmd('N' + ssid);
+            
+            // Send Password after 500ms for reliability
+            setTimeout(() => {
+                sendCmd('K' + pass);
+                btn.innerText = "SUCCESS!";
+                btn.style.background = "var(--success)";
                 
-                showToast("SYNCING NETWORK CONFIG...");
-                
-                if (activeElement === document.getElementById('wifi-ssid')) {
-                    if (ssid) sendCmd('N' + ssid);
-                } else if (activeElement === document.getElementById('wifi-pass')) {
-                    sendCmd('K' + pass);
-                } else {
-                    if (ssid) sendCmd('N' + ssid);
-                    setTimeout(() => sendCmd('K' + pass), 500);
-                }
-                
-                let card = document.getElementById('wifi-card');
-                if (card) {
-                    card.style.borderColor = "var(--success)";
-                    setTimeout(() => card.style.borderColor = "rgba(255,255,255,0.05)", 800);
-                }
-            }, 1000); 
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = "";
+                }, 2000);
+            }, 500);
         }
 
         let activeElement = null;

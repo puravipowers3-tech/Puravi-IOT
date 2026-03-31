@@ -855,7 +855,8 @@
         let lastLogTime = 0;
 
         function connect() {
-            const clientId = "p_u_" + Date.now() + "_" + Math.random().toString(16).substr(2, 4);
+            // Strictly < 23 chars for MQTT 3.1.1 compatibility
+            const clientId = "pu_" + Math.random().toString(16).substr(2, 8);
             client = new Paho.MQTT.Client(BROKER, PORT, clientId);
             client.onConnectionLost = (rsp) => {
                 let reason = rsp.errorMessage || "Network Error";
@@ -877,10 +878,11 @@
                     setTimeout(() => sendCmd('Q'), 4000); // Retry after 4s for STM8 boot
                 },
                 onFailure: (err) => {
-                    let msg = err.errorMessage || "Unknown Error";
-                    if (msg.includes("AMQJSC0001E")) msg = "WRONG PASSWORD/USER";
-                    updateStatus(false, "CLOUD FAILED: " + msg);
-                    setTimeout(connect, 5000); // Wait 5s and try again
+                    let msg = err.errorMessage || "Check Internet/Broker";
+                    if (msg.includes("AMQJSC0001E") || msg.includes("return code:5")) 
+                        msg = "AUTH FAILED: Check HiveMQ Username/Pass";
+                    updateStatus(false, "CLOUD ERROR: " + msg);
+                    setTimeout(connect, 5000); 
                 }
             });
         }
